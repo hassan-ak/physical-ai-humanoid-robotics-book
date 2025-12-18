@@ -1,0 +1,123 @@
+# API Contract: Documentation Service
+
+## Overview
+This contract defines the API endpoints for the documentation service that will support the Docusaurus frontend.
+
+## Base URL
+`/api/v1`
+
+## Endpoints
+
+### GET /pages
+Retrieve documentation pages with filtering and pagination
+
+**Request**:
+- Query Parameters:
+  - `module` (optional): Filter by course module
+  - `locale` (optional): Filter by language (default: 'en')
+  - `limit` (optional): Number of results (default: 20, max: 100)
+  - `offset` (optional): Offset for pagination (default: 0)
+
+**Response**:
+```json
+{
+  "pages": [
+    {
+      "id": "string",
+      "title": "string",
+      "slug": "string",
+      "module": "string",
+      "chapter": "number",
+      "locale": "string",
+      "createdAt": "datetime",
+      "updatedAt": "datetime"
+    }
+  ],
+  "pagination": {
+    "total": "number",
+    "limit": "number",
+    "offset": "number",
+    "hasNext": "boolean"
+  }
+}
+```
+
+### GET /pages/{slug}
+Retrieve a specific documentation page by slug
+
+**Request**:
+- Path Parameter: `slug` - URL-friendly page identifier
+- Query Parameters:
+  - `locale` (optional): Language (default: 'en')
+
+**Response**:
+```json
+{
+  "id": "string",
+  "title": "string",
+  "slug": "string",
+  "content": "string",
+  "module": "string",
+  "chapter": "number",
+  "locale": "string",
+  "metadata": "object",
+  "createdAt": "datetime",
+  "updatedAt": "datetime"
+}
+```
+
+### POST /validation/links
+Validate all internal links in documentation
+
+**Request**:
+```json
+{
+  "pages": ["string"] // Array of page slugs to validate
+}
+```
+
+**Response**:
+```json
+{
+  "valid": "boolean",
+  "brokenLinks": [
+    {
+      "sourcePage": "string",
+      "targetUrl": "string",
+      "error": "string"
+    }
+  ],
+  "summary": {
+    "totalLinks": "number",
+    "brokenCount": "number"
+  }
+}
+```
+
+### POST /validation/mdx
+Validate MDX syntax across documentation files
+
+**Request**:
+```json
+{
+  "files": ["string"] // Array of file paths to validate
+}
+```
+
+**Response**:
+```json
+{
+  "valid": "boolean",
+  "errors": [
+    {
+      "file": "string",
+      "line": "number",
+      "error": "string"
+    }
+  ],
+  "summary": {
+    "totalFiles": "number",
+    "errorCount": "number"
+  }
+}
+```

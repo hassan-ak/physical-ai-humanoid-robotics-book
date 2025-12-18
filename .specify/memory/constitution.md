@@ -1,55 +1,41 @@
-# [PROJECT_NAME] Constitution
-<!-- Example: Spec Constitution, TaskFlow Constitution, etc. -->
+<!--
+Sync Impact Report:
+- Version change: 1.0.0 → 1.0.0 (initial constitution for Physical AI & Humanoid Robotics project)
+- Modified principles: All principles newly defined for this project
+- Added sections: Architecture & Tools, Development Discipline, Quality & Testing, Educational Principles
+- Removed sections: None (new project constitution)
+- Templates requiring updates: ✅ Updated
+- Follow-up TODOs: None
+-->
+# Physical AI & Humanoid Robotics Constitution
 
 ## Core Principles
 
-### [PRINCIPLE_1_NAME]
-<!-- Example: I. Library-First -->
-[PRINCIPLE_1_DESCRIPTION]
-<!-- Example: Every feature starts as a standalone library; Libraries must be self-contained, independently testable, documented; Clear purpose required - no organizational-only libraries -->
+### I. Spec-First Development (MANDATORY)
+All development must follow strict spec-first methodology: constitution → specifications → plans → tasks → implementation. No code implementation is allowed before completing the full spec pipeline. All AI behavior must comply with this constitution and derived specifications. This ensures systematic, predictable development aligned with project goals.
 
-### [PRINCIPLE_2_NAME]
-<!-- Example: II. CLI Interface -->
-[PRINCIPLE_2_DESCRIPTION]
-<!-- Example: Every library exposes functionality via CLI; Text in/out protocol: stdin/args → stdout, errors → stderr; Support JSON + human-readable formats -->
+### II. AI-Native Architecture (MANDATORY)
+The textbook must be implemented using Docusaurus and deployed publicly (GitHub Pages or Vercel). Reusable intelligence via Claude Code Subagents and Agent Skills is mandatory. An integrated Retrieval-Augmented Generation (RAG) chatbot must be embedded within the book UI, supporting OpenAI Agents/ChatKit SDK, FastAPI, Neon Serverless Postgres, and Qdrant Cloud.
 
-### [PRINCIPLE_3_NAME]
-<!-- Example: III. Test-First (NON-NEGOTIABLE) -->
-[PRINCIPLE_3_DESCRIPTION]
-<!-- Example: TDD mandatory: Tests written → User approved → Tests fail → Then implement; Red-Green-Refactor cycle strictly enforced -->
+### III. User Authentication & Profiling (MANDATORY)
+User authentication must be implemented using Better-Auth. During signup, the system must capture user software and hardware background data. This enables AI-driven content personalization based on user profiles and ensures the educational content adapts to diverse technical backgrounds.
 
-### [PRINCIPLE_4_NAME]
-<!-- Example: IV. Integration Testing -->
-[PRINCIPLE_4_DESCRIPTION]
-<!-- Example: Focus areas requiring integration tests: New library contract tests, Contract changes, Inter-service communication, Shared schemas -->
+### IV. Chapter-Level Personalization (MANDATORY)
+Every chapter must expose explicit UI controls for AI-driven content personalization based on user profiles and on-demand Urdu translation. This ensures accessibility and adaptability to different learning needs and linguistic preferences.
 
-### [PRINCIPLE_5_NAME]
-<!-- Example: V. Observability, VI. Versioning & Breaking Changes, VII. Simplicity -->
-[PRINCIPLE_5_DESCRIPTION]
-<!-- Example: Text I/O ensures debuggability; Structured logging required; Or: MAJOR.MINOR.BUILD format; Or: Start simple, YAGNI principles -->
+### V. Test-First Development (MANDATORY)
+All implemented code must include comprehensive automated tests wherever technically feasible. Tests must cover unit, integration, and behavior-level scenarios. Tests must be executed as part of development to validate correctness. Code is considered incomplete unless tests pass successfully. The goal of testing is to eliminate the need for manual code review by the user.
 
-### [PRINCIPLE_6_NAME]
+### VI. Reusable & Modular Intelligence
+Agents and skills must be reusable, modular, and evolution-friendly. This supports the long-term maintainability and extensibility of the educational platform while enabling consistent, scalable AI interactions across the textbook.
 
+## Architecture & Tools Requirements
+The project must be authored using Spec-Kit Plus and Claude Code. The technical stack must include ROS 2, Gazebo, Unity (Digital Twins), NVIDIA Isaac Sim, Isaac ROS, and Vision-Language-Action systems. Hardware baseline requirements include NVIDIA RTX 4070 Ti+ workstations and Jetson Orin edge kits.
 
-[PRINCIPLE__DESCRIPTION]
-
-## [SECTION_2_NAME]
-<!-- Example: Additional Constraints, Security Requirements, Performance Standards, etc. -->
-
-[SECTION_2_CONTENT]
-<!-- Example: Technology stack requirements, compliance standards, deployment policies, etc. -->
-
-## [SECTION_3_NAME]
-<!-- Example: Development Workflow, Review Process, Quality Gates, etc. -->
-
-[SECTION_3_CONTENT]
-<!-- Example: Code review requirements, testing gates, deployment approval process, etc. -->
+## Educational Principles
+The project must focus on Embodied Intelligence — bridging digital AI systems with physical humanoid bodies. Content must progress from beginner to advanced levels, culminating in a humanoid robotics capstone. The tone must be technically rigorous, practical, empathetic, and startup-founder oriented.
 
 ## Governance
-<!-- Example: Constitution supersedes all other practices; Amendments require documentation, approval, migration plan -->
+This constitution supersedes all other development practices and requirements. All implementation must verify compliance with these principles. Amendments require formal documentation and approval process. All development activities must reference this constitution for guidance and compliance verification.
 
-[GOVERNANCE_RULES]
-<!-- Example: All PRs/reviews must verify compliance; Complexity must be justified; Use [GUIDANCE_FILE] for runtime development guidance -->
-
-**Version**: [CONSTITUTION_VERSION] | **Ratified**: [RATIFICATION_DATE] | **Last Amended**: [LAST_AMENDED_DATE]
-<!-- Example: Version: 2.1.1 | Ratified: 2025-06-13 | Last Amended: 2025-07-16 -->
+**Version**: 1.0.0 | **Ratified**: 2025-12-18 | **Last Amended**: 2025-12-18
