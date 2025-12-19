@@ -1,0 +1,389 @@
+---
+title: "Pre-phase: Hardware & Software Setup Guide"
+sidebar_position: 2
+---
+
+import ActionBar from '@site/src/components/ActionBar/ActionBar';
+
+# Hardware & Software Setup Guide: Physical AI Development Environment
+
+<ActionBar />
+
+## Overview
+
+This comprehensive setup guide will walk you through configuring your development environment for Physical AI and humanoid robotics. We'll set up Ubuntu 22.04 LTS with the complete software stack including ROS 2 Humble Hawksbill, NVIDIA Isaac Sim, and all necessary dependencies.
+
+### Prerequisites
+- NVIDIA Jetson AGX Orin Developer Kit (or equivalent development workstation)
+- Intel RealSense D435i depth camera
+- Stable internet connection
+- 100GB+ free disk space
+- Administrator access to your system
+
+### Estimated Time
+- **Novice**: 4-6 hours
+- **Intermediate**: 2-3 hours
+- **Expert**: 1-2 hours
+
+## Phase 1: Ubuntu 22.04 LTS Installation
+
+### Option A: Jetson Orin Setup (Recommended)
+
+1. **Download JetPack SDK**:
+   - Visit [NVIDIA JetPack Downloads](https://developer.nvidia.com/embedded/jetpack)
+   - Download JetPack 5.1.3 or newer for Orin
+   - Verify checksum: `sha256sum JetPack_*_linux_x64_b*.run`
+
+2. **Flash Jetson Orin**:
+   ```bash
+   # Make the installer executable
+   chmod +x JetPack_*_linux_x64_b*.run
+
+   # Run the installer
+   sudo ./JetPack_*_linux_x64_b*.run
+   ```
+
+3. **Initial Configuration**:
+   - Connect to internet (ethernet preferred)
+   - Create user account with admin privileges
+   - Set timezone and keyboard layout
+   - Enable automatic updates for security patches
+
+4. **Verify Installation**:
+   ```bash
+   # Check Ubuntu version
+   lsb_release -a
+
+   # Verify Jetson specifics
+   sudo apt install -y jetson-stats
+   jtop
+   ```
+
+### Option B: x86_64 Development Station
+
+1. **Install Ubuntu 22.04 LTS**:
+   - Download ISO from [Ubuntu Releases](https://releases.ubuntu.com/22.04/)
+   - Create bootable USB using Rufus (Windows) or `dd` (Linux/Mac)
+   - Boot from USB and install with default settings
+   - Ensure at least 100GB partition for development work
+
+2. **Post-Installation Updates**:
+   ```bash
+   # Update system packages
+   sudo apt update && sudo apt upgrade -y
+
+   # Install essential build tools
+   sudo apt install -y build-essential cmake git curl wget
+   ```
+
+## Phase 2: NVIDIA Isaac Sim Setup
+
+### System Requirements Verification
+```bash
+# Check CUDA compatibility
+nvidia-smi
+
+# Verify graphics driver
+glxinfo | grep "OpenGL renderer string"
+```
+
+### Install Isaac Sim Dependencies
+```bash
+# Install NVIDIA Container Toolkit
+curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey | sudo gpg --dearmor -o /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg \
+  && curl -s -L https://nvidia.github.io/libnvidia-container/stable/deb/nvidia-container-toolkit.list | \
+    sed 's#deb https://#deb [signed-by=/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg] https://#g' | \
+    sudo tee /etc/apt/sources.list.d/nvidia-container-toolkit.list
+
+sudo apt update
+sudo apt install -y nvidia-container-toolkit
+sudo systemctl restart docker
+
+# Install Isaac Sim prerequisites
+sudo apt install -y python3-pip python3-dev python3-venv
+pip3 install --upgrade pip
+```
+
+### Download and Install Isaac Sim
+```bash
+# Create development directory
+mkdir -p ~/workspace/isaac_sim
+cd ~/workspace/isaac_sim
+
+# Download Isaac Sim (requires NVIDIA Developer Account)
+# Visit https://developer.nvidia.com/isaac-sim and download Omniverse App Installer
+# Install Isaac Sim using the Omniverse launcher
+```
+
+## Phase 3: ROS 2 Humble Hawksbill Installation
+
+### Add ROS 2 Repository
+```bash
+# Set locale
+sudo locale-gen en_US.UTF-8
+export LANG=en_US.UTF-8
+
+# Add ROS 2 GPG key
+sudo apt update && sudo apt install -y curl gnupg
+curl -sSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.key -o /usr/share/keyrings/ros-archive-keyring.gpg
+
+# Add repository to sources list
+echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/ros-archive-keyring.gpg] http://packages.ros.org/ros2/ubuntu $(. /etc/os-release && echo $UBUNTU_CODENAME) main" | sudo tee /etc/apt/sources.list.d/ros2.list > /dev/null
+
+# Update package index
+sudo apt update
+
+# Install ROS 2 Humble Desktop
+sudo apt install -y ros-humble-desktop
+```
+
+### Install Additional ROS 2 Packages
+```bash
+# Install development tools
+sudo apt install -y \
+  python3-colcon-common-extensions \
+  python3-rosdep \
+  python3-vcstool \
+  build-essential \
+  cmake \
+  git \
+  libbullet-dev \
+  python3-bloom \
+  python3-catkin-tools \
+  python3-pip \
+  python3-setuptools \
+  wget
+
+# Initialize rosdep
+sudo rosdep init
+rosdep update
+
+# Install Isaac ROS packages
+source /opt/ros/humble/setup.bash
+sudo apt install -y ros-humble-isaac-ros-* ros-humble-novatel-oem7-driver
+```
+
+### Set Up ROS 2 Environment
+```bash
+# Add to ~/.bashrc
+echo "source /opt/ros/humble/setup.bash" >> ~/.bashrc
+echo "source /usr/share/colcon_cd/function/colcon_cd.sh" >> ~/.bashrc
+echo "export COLCON_CD_ROOTS_PATHS=$HOME/workspace" >> ~/.bashrc
+echo "export ROS_DOMAIN_ID=1" >> ~/.bashrc
+
+# Reload bash configuration
+source ~/.bashrc
+```
+
+## Phase 4: Intel RealSense Integration
+
+### Install RealSense SDK
+```bash
+# Add RealSense repository
+sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-key F6E65AC044F831AC80A06380C8B3A55A6F3EFCDE || sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-key F6E65AC044F831AC80A06380C8B3A55A6F3EFCDE
+sudo add-apt-repository "deb https://librealsense.intel.com/Debian/apt-repo $(lsb_release -cs) main" -u
+
+# Install RealSense packages
+sudo apt-get update
+sudo apt-get install -y librealsense2-dkms librealsense2-utils librealsense2-dev librealsense2-dbg
+```
+
+### Install ROS 2 RealSense Package
+```bash
+# Install realsense-ros package
+sudo apt install -y ros-humble-realsense2-camera
+
+# Verify installation
+ros2 run realsense2_camera rs_launch.py
+```
+
+### Test RealSense Connection
+```bash
+# Check if camera is detected
+rs-enumerate-devices
+
+# Run simple test
+rs-capture -f 30 -r 1280x720
+```
+
+## Phase 5: Development Environment Configuration
+
+### Create Workspace Structure
+```bash
+# Create main workspace
+mkdir -p ~/workspace/physical_ai/{src,build,install,log}
+
+# Create ROS 2 workspace
+mkdir -p ~/workspace/ros2_ws/src
+cd ~/workspace/ros2_ws
+
+# Clone essential repositories
+git clone -b humble https://github.com/NVIDIA-ISAAC-ROS/isaac_ros_common.git src/isaac_ros_common
+git clone -b humble https://github.com/NVIDIA-ISAAC-ROS/isaac_ros_benchmark.git src/isaac_ros_benchmark
+git clone -b humble https://github.com/NVIDIA-ISAAC-ROS/isaac_ros_visual_slam.git src/isaac_ros_visual_slam
+```
+
+### Install Python Development Environment
+```bash
+# Create virtual environment
+cd ~/workspace
+python3 -m venv physical_ai_env
+source physical_ai_env/bin/activate
+
+# Install essential Python packages
+pip install --upgrade pip setuptools wheel
+pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
+pip install openai-whisper transformers datasets accelerate
+pip install opencv-python mediapipe numpy scipy matplotlib
+pip install rclpy rospkg catkin_pkg
+
+# Install development tools
+pip install black flake8 mypy pytest pytest-cov jupyterlab
+```
+
+### Configure VS Code for Development
+```bash
+# Install VS Code extensions
+code --install-extension ms-python.python
+code --install-extension ms-iot.vscode-ros
+code --install-extension ms-vscode.cpptools
+code --install-extension charliermarsh.ruff
+code --install-extension njpwerner.autodetect-nginx-formatter
+```
+
+## Phase 6: Testing and Validation
+
+### Run Basic Tests
+```bash
+# Test ROS 2 installation
+source /opt/ros/humble/setup.bash
+ros2 topic list
+
+# Test Isaac Sim (in separate terminal)
+# Launch Isaac Sim and verify basic functionality
+
+# Test RealSense camera
+source ~/workspace/physical_ai_env/bin/activate
+python3 -c "import pyrealsense2 as rs; print('RealSense SDK loaded successfully')"
+```
+
+### Create Test Script
+```bash
+# Create validation script
+cat << 'EOF' > ~/workspace/physical_ai_validation.py
+#!/usr/bin/env python3
+
+import sys
+import subprocess
+import importlib.util
+
+def check_ros():
+    """Check ROS 2 installation"""
+    try:
+        import rclpy
+        print("✓ ROS 2 Python bindings: OK")
+        return True
+    except ImportError:
+        print("✗ ROS 2 Python bindings: NOT FOUND")
+        return False
+
+def check_realsense():
+    """Check RealSense installation"""
+    try:
+        import pyrealsense2 as rs
+        print("✓ RealSense SDK: OK")
+        return True
+    except ImportError:
+        print("✗ RealSense SDK: NOT FOUND")
+        return False
+
+def check_cuda():
+    """Check CUDA availability"""
+    try:
+        import torch
+        if torch.cuda.is_available():
+            print(f"✓ CUDA: OK (Device: {torch.cuda.get_device_name()})")
+            return True
+        else:
+            print("✗ CUDA: NOT AVAILABLE")
+            return False
+    except ImportError:
+        print("✗ CUDA: TORCH NOT INSTALLED")
+        return False
+
+def main():
+    print("Physical AI Development Environment Validation")
+    print("=" * 50)
+
+    results = []
+    results.append(check_ros())
+    results.append(check_realsense())
+    results.append(check_cuda())
+
+    print("\nValidation Summary:")
+    print(f"Passed: {sum(results)}/{len(results)}")
+
+    if all(results):
+        print("🎉 All checks passed! Environment ready for Physical AI development.")
+        return 0
+    else:
+        print("⚠️  Some checks failed. Please review the setup guide.")
+        return 1
+
+if __name__ == "__main__":
+    sys.exit(main())
+EOF
+
+chmod +x ~/workspace/physical_ai_validation.py
+```
+
+### Run Validation
+```bash
+source ~/workspace/physical_ai_env/bin/activate
+python3 ~/workspace/physical_ai_validation.py
+```
+
+## Troubleshooting Common Issues
+
+### Issue: CUDA Not Found
+**Solution**:
+```bash
+# Verify NVIDIA drivers
+nvidia-smi
+
+# Reinstall CUDA toolkit if needed
+sudo apt install nvidia-cuda-toolkit
+```
+
+### Issue: RealSense Camera Not Detected
+**Solution**:
+```bash
+# Check USB permissions
+sudo usermod -a -G dialout $USER
+sudo cp /etc/udev/rules.d/*realsense* /lib/udev/rules.d/
+sudo udevadm control --reload-rules && sudo udevadm trigger
+```
+
+### Issue: ROS 2 Commands Not Found
+**Solution**:
+```bash
+# Ensure ROS 2 is sourced
+source /opt/ros/humble/setup.bash
+
+# Add to bashrc permanently if needed
+echo "source /opt/ros/humble/setup.bash" >> ~/.bashrc
+```
+
+## Next Steps
+
+Congratulations! Your Physical AI development environment is now set up. Proceed to the [Mindset & Approach](./mindset.mdx) section to understand the entrepreneurial approach to robotics development.
+
+---
+
+### Key Takeaways
+
+1. **Patience**: Setup can take several hours - be patient and follow each step carefully
+2. **Verification**: Always verify each component before proceeding to the next step
+3. **Documentation**: Keep this guide handy for troubleshooting
+4. **Support**: Join the NVIDIA Developer forums for community assistance
+5. **Backup**: Consider creating a system backup once everything works correctly

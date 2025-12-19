@@ -1,0 +1,115 @@
+---
+title: "Pre-phase: Bill of Materials"
+sidebar_position: 1
+---
+
+import ActionBar from '@site/src/components/ActionBar/ActionBar';
+
+# Bill of Materials: Physical AI Hardware Setup
+
+<ActionBar />
+
+## Essential Hardware Requirements
+
+This guide outlines the required hardware components for setting up your Physical AI development environment. All components are selected for optimal performance with NVIDIA Isaac Sim, ROS 2, and humanoid robotics applications.
+
+### Primary Computing Platform: NVIDIA Jetson Orin
+
+- **Model**: NVIDIA Jetson AGX Orin Developer Kit (64GB)
+- **GPU**: 2048-core NVIDIA Ampere GPU with 128 Tensor Cores
+- **CPU**: 12-core ARM Cortex-A78AE v8.2 64-bit CPU
+- **Memory**: 64 GB LPDDR5 memory (204.8 GB/s)
+- **Storage**: 32 GB eMMC 5.1
+- **Connectivity**: 2.5 GBE, Wi-Fi 6E, Bluetooth 5.3
+- **Power**: Included 19V/65W AC adapter
+- **Price Range**: ~$1,499-1,799 USD
+
+### Intel RealSense Depth Camera D435i
+
+- **Model**: Intel RealSense Depth Camera D435i
+- **Depth Technology**: Stereo Vision (Active Stereo)
+- **Depth Field of View**: 85° × 58° × 110° (H×V×D)
+- **Depth Sensing Range**: 0.26m to 9.1m
+- **Accelerometer and Gyroscope**: Built-in IMU for motion tracking
+- **Resolution**: Up to 1280 × 720
+- **Frame Rate**: Up to 90 FPS
+- **Connectivity**: USB 3.2 Gen 1 Type-C
+- **Price Range**: ~$179-199 USD
+
+### Alternative Depth Cameras (Optional)
+
+#### Intel RealSense D455
+- **Enhanced Range**: 0.04m to 10m
+- **Higher Resolution**: Up to 1280 × 720
+- **Advanced IMU**: Improved motion tracking
+- **Price Range**: ~$299-349 USD
+
+#### Stereolabs ZED 2i
+- **Stereo Camera**: 2x 4K tracking cameras
+- **Built-in IMU**: High-accuracy inertial sensors
+- **Range**: Up to 20 meters
+- **Price Range**: ~$449-499 USD
+
+### Supporting Hardware Components
+
+#### Power Supply & Connectivity
+- **USB-C Hub**: 7-in-1 with 100W Power Delivery
+- **Ethernet Cable**: Cat6 10ft for reliable network connection
+- **Power Strip**: Surge-protected with 6 outlets minimum
+- **Monitor**: 24-27 inch 1080p/1440p for development
+
+#### Mechanical Components (For Physical Testing)
+- **Mobile Base Platform**:
+  - Ackerman steering or differential drive platform
+  - Payload capacity: 10kg+
+  - Integrated Jetson carrier board support
+  - Price Range: ~$800-2,000 USD
+
+#### Sensors & Peripherals
+- **LiDAR**: Slamtec RPLIDAR A3M1 (optional but recommended)
+  - Range: 0.15m to 25m
+  - Price Range: ~$400-450 USD
+- **IMU**: Adafruit 9-DOF Absolute Orientation IMU
+  - Accelerometer, Gyroscope, Magnetometer
+  - Price Range: ~$150-175 USD
+- **Battery**: 22.2V 5000mAh LiPo Battery Pack
+  - For mobile platform autonomy
+  - Price Range: ~$100-150 USD
+
+### Budget Considerations
+
+| Tier | Components | Estimated Cost | Purpose |
+|------|------------|----------------|---------|
+| **Essential** | Jetson Orin + D435i | $1,678-$1,998 | Core development platform |
+| **Recommended** | Essential + ZED 2i + LiDAR | $2,577-$3,097 | Enhanced perception capabilities |
+| **Full Setup** | Recommended + Mobile platform | $3,377-$5,097 | Complete Physical AI lab |
+
+### Purchasing Guidance
+
+1. **Start with Essential**: Begin with the Jetson Orin and D435i for core development
+2. **Budget Planning**: Set aside 10-15% additional budget for shipping and taxes
+3. **Academic Discounts**: Check NVIDIA Academic Program for education pricing
+4. **Bulk Orders**: Consider group purchases for institutional discounts
+5. **Backup Components**: Budget for spare cables and SD cards (5-10% of total)
+
+### Technical Specifications Summary
+
+The selected hardware platform provides:
+- **Compute Power**: 275 TOPS AI performance for neural network inference
+- **Real-time Processing**: Capable of running multiple perception models simultaneously
+- **ROS 2 Compatibility**: Full support for Robot Operating System 2 (Humble Hawksbill)
+- **Simulation Integration**: Optimized for NVIDIA Isaac Sim and Gazebo
+- **Scalability**: Expandable with additional sensors and actuators
+
+### Next Steps
+
+Once you've acquired the necessary hardware, proceed to the [Setup Guide](./setup.mdx) to configure your development environment with Ubuntu 22.04 and the required software stack.
+
+---
+
+### Key Takeaways
+
+1. **Investment**: Physical AI development requires substantial hardware investment but provides real-world testing capabilities
+2. **Flexibility**: Selected components offer flexibility for various robotics applications
+3. **Future-proof**: Hardware choices support current and emerging AI/robotics technologies
+4. **ROI**: Professional-grade equipment ensures reliable development and testing

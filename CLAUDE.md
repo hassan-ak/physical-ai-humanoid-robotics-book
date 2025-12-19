@@ -219,6 +219,7 @@ See `.specify/memory/constitution.md` for code quality, testing, performance, se
 - N/A (file-based documentation content in MDX format) (005-digital-twin-physics)
 - Python 3.8+ (for ROS 2 Humble), JavaScript/TypeScript (for Docusaurus framework), C++ (for NVIDIA Isaac Sim/ROS) + Docusaurus 3.x, React 18.x, Node.js 18+, ROS 2 Humble, NVIDIA Isaac Sim, Isaac ROS, NITROS (NVIDIA Isaac Transport for ROS) (006-ai-robot-brain)
 - Python 3.8+ (for ROS 2 Humble), JavaScript/TypeScript (for Docusaurus framework) + Docusaurus 3.x, React 18.x, Node.js 18+, ROS 2 Humble, rclpy client library, OpenAI Whisper, LLM APIs (GPT-4/GPT-4o) (007-humanoid-dynamics-voice)
+- TypeScript 5.x, JavaScript ES2022 + Docusaurus 3.x, React 18.x, Node.js 18+, npm/yarn + Docusaurus 3.x, React 18.x, Node.js 18+, TypeScript 5.x, npm/yarn, MDX, SCSS/CSS modules for styling (008-physical-ai-bootcamp)
 
 ## Recent Changes
 - 001-docusaurus-infrastructure: Added TypeScript 5.x, JavaScript ES2022 + Docusaurus 3.x, React 18.x, Node.js 18+, npm/yarn
