@@ -1,0 +1,74 @@
+# Content Generation API Contract
+
+## Purpose
+This contract defines the interface for generating educational content for the AI-Robot Brain module.
+
+## Endpoints
+
+### POST /generate-week-content
+Generate content for a specific week based on parameters.
+
+**Request**:
+```json
+{
+  "week_number": 8,
+  "topic": "USD and Synthetic Data",
+  "subtopics": ["Universal Scene Description", "RTX Rendering", "Synthetic Data Generation"],
+  "target_language": "en",
+  "tone": "Startup Founder",
+  "include_urdu": true
+}
+```
+
+**Response**:
+```json
+{
+  "status": "success",
+  "content": "MDX formatted content",
+  "components_used": ["ActionBar"],
+  "validation_status": "passed"
+}
+```
+
+### POST /generate-urdu-translation
+Generate Urdu translation for English content.
+
+**Request**:
+```json
+{
+  "english_content": "Original English MDX content",
+  "glossary_terms": ["Synthetic Data", "Reinforcement Learning", "SLAM"],
+  "preserve_code_blocks": true
+}
+```
+
+**Response**:
+```json
+{
+  "status": "success",
+  "urdu_content": "Translated Urdu MDX content",
+  "terms_translated": 3,
+  "validation_status": "passed"
+}
+```
+
+### GET /optimization-parameters/jetson-orin
+Get optimization parameters for Jetson Orin hardware.
+
+**Response**:
+```json
+{
+  "hardware": "Jetson Orin",
+  "optimization_approaches": {
+    "nitros": {
+      "description": "NVIDIA Isaac Transport for ROS",
+      "latency_reduction": "up to 50%",
+      "memory_optimization": "zero-copy transport"
+    },
+    "cuda_acceleration": {
+      "enabled": true,
+      "components": ["perception_pipeline", "sensor_processing"]
+    }
+  }
+}
+```

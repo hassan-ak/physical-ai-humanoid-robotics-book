@@ -1,0 +1,693 @@
+---
+title: "ہفتہ 13: OpenAI وِسپر اور LLM منصوبہ بندی کے ساتھ وائس ٹو ایکشن سسٹم"
+sidebar_position: 13
+---
+
+import ActionBar from '@site/src/components/ActionBar/ActionBar';
+
+# ہفتہ 13: OpenAI وِسپر اور LLM منصوبہ بندی کے ساتھ وائس ٹو ایکشن سسٹم
+
+<ActionBar />
+
+## اسٹارٹ اپ فاؤنڈر کی حیثیت سے وائس ٹو ایکشن کا تعارف
+
+اس ہفتے میں، ہم ہیومنوائڈ روبوٹس کے لیے وائس ٹو ایکشن سسٹم کے سر فروش شعبے کا جائزہ لیں گے۔ ایک اسٹارٹ اپ فاؤنڈر کی حیثیت سے، روبوٹ کنٹرول کے ساتھ قدرتی زبان کے عمل کو انضمام کرنا سیکھنا انتہائی اہم ہے تاکہ آپ انسان روبوٹ تعامل کو آسان بنانے والے روبوٹس تیار کر سکیں۔ وائس انٹرفیس روبوٹس کو انسانی حکم کو قدرتی طریقے سے سمجھنے اور جواب دینے کی اجازت دیتے ہیں، جو ان کی قابلِ استعمال اور قابلِ رسائی کو نمایاں طور پر بہتر بنا دیتا ہے۔
+
+### وائس ٹو ایکشن پائپ لائن: تقریر سے روبوٹ ایکشن تک
+
+وائس ٹو ایکشن سسٹم کو ایک دوسرے کے ساتھ کام کرنے والے کئی اجزاء پر مشتمل ہوتا ہے تاکہ انسانی تقریر کو روبوٹ ایکشن میں تبدیل کیا جا سکے۔ یہ پائپ لائن عام طور پر ان پر مشتمل ہوتی ہے:
+
+1. **تقریر کی پہچان**: آڈیو کو متن میں تبدیل کرنا
+2. **قدرتی زبان کی سمجھ**: متن کو پارس اور تشریح کرنا
+3. **ایکشن میپنگ**: حکم کو روبوٹ ایکشن میں تبدیل کرنا
+4. **عمل**: روبوٹ کنٹرول سسٹم کے ذریعے ایکشن انجام دینا
+
+### OpenAI وِسپر API انضمام
+
+OpenAI وِسپر ایک عمدہ تقریر کی پہچان کا سسٹم ہے جو تقریر کو متن میں تبدیل کرنے کے قابل ہے۔ یہاں دیکھیں کہ آپ اسے اپنے ہیومنوائڈ روبوٹ کے ساتھ کیسے انضمام کر سکتے ہیں:
+
+```python
+import openai
+import asyncio
+import numpy as np
+from typing import Dict, List, Tuple, Optional
+import requests
+import io
+from pydub import AudioSegment
+
+class WhisperVoiceProcessor:
+    """
+    OpenAI وِسپر API کا استعمال کرتے ہوئے وائس پروسیسر
+    """
+    def __init__(self, api_key: str, model: str = "whisper-1"):
+        """
+        وِسپر وائس پروسیسر شروع کریں
+        :param api_key: OpenAI API کلید
+        :param model: استعمال کرنے کے لیے وِسپر ماڈل
+        """
+        openai.api_key = api_key
+        self.model = model
+        self.transcription_history = []
+
+    async def transcribe_audio(self, audio_file_path: str) -> str:
+        """
+        وِسپر API کا استعمال کرتے ہوئے آڈیو فائل کا ترجمہ کریں
+        :param audio_file_path: آڈیو فائل کا راستہ
+        :return: ترجمہ شدہ متن
+        """
+        with open(audio_file_path, "rb") as audio_file:
+            response = openai.Audio.transcribe(
+                model=self.model,
+                file=audio_file,
+                response_format="text"
+            )
+
+        transcription = response.strip()
+        self.transcription_history.append(transcription)
+
+        return transcription
+
+    async def transcribe_audio_from_bytes(self, audio_bytes: bytes, file_format: str = "mp3") -> str:
+        """
+        بائٹس سے وِسپر API کا استعمال کرتے ہوئے آڈیو کا ترجمہ کریں
+        :param audio_bytes: بائٹس میں آڈیو ڈیٹا
+        :param file_format: آڈیو فائل کی شکل (mp3، wav، وغیرہ)
+        :return: ترجمہ شدہ متن
+        """
+        # ایک عارضی فائل جیسی آبجیکٹ بنائیں
+        audio_io = io.BytesIO(audio_bytes)
+        audio_io.name = f"temp_audio.{file_format}"
+
+        response = openai.Audio.transcribe(
+            model=self.model,
+            file=audio_io,
+            response_format="text"
+        )
+
+        transcription = response.strip()
+        self.transcription_history.append(transcription)
+
+        return transcription
+
+    def process_real_time_audio(self, audio_stream) -> str:
+        """
+        حقیقی وقت کا آڈیو سٹریم عمل کریں (سادہ نفاذ)
+        مشق میں، آپ بفر کریں گے اور وِسپر کو ٹکڑوں میں بھیجیں گے
+        """
+        # یہ ایک سادہ مثال ہے - حقیقی وقت کی پروسیسنگ کے لیے
+        # زیادہ جامع بفرنگ اور سٹریمنگ لاگ ضروری ہوگی
+        pass
+
+# مثال کا استعمال
+async def example_usage():
+    # وائس پروسیسر شروع کریں
+    whisper_processor = WhisperVoiceProcessor(api_key="your-openai-api-key")
+
+    # آڈیو فائل کا ترجمہ کریں
+    transcription = await whisper_processor.transcribe_audio("path/to/audio.wav")
+    print(f"ترجمہ شدہ: {transcription}")
+```
+
+### پائی تھون سکرپٹ: LLM سے ROS 2 میپنگ لاگ
+
+یہاں LLM-بیسڈ کوگنیٹو پلاننگ سسٹم کا مکمل نفاذ ہے جو قدرتی زبان کے حکم کو ROS 2 ایکشن میں تبدیل کرتا ہے:
+
+```python
+import openai
+import json
+import asyncio
+from typing import Dict, List, Tuple, Any
+from dataclasses import dataclass
+from enum import Enum
+import numpy as np
+
+class ActionType(Enum):
+    """
+    روبوٹ ایکشن کی مختلف اقسام کا ان گا
+    """
+    MOVE_TO = "move_to"
+    GRASP = "grasp"
+    PLACE = "place"
+    FOLLOW = "follow"
+    SPEAK = "speak"
+    SEARCH = "search"
+    GREET = "greet"
+
+@dataclass
+class RobotAction:
+    """
+    روبوٹ ایکشن کی نمائندگی کرنے والا ڈیٹا کلاس
+    """
+    action_type: ActionType
+    parameters: Dict[str, Any]
+    priority: int = 1  # زیادہ ترجیح والے ایکشن پہلے انجام دیے جاتے ہیں
+
+class LLMBridge:
+    """
+    LLMs اور ROS 2 روبوٹ ایکشن کے درمیان پل
+    """
+    def __init__(self, api_key: str, model: str = "gpt-4o"):
+        """
+        LLM پل شروع کریں
+        :param api_key: OpenAI API کلید
+        :param model: استعمال کرنے کے لیے GPT ماڈل
+        """
+        openai.api_key = api_key
+        self.model = model
+        self.action_history = []
+
+    async def parse_command(self, command: str) -> List[RobotAction]:
+        """
+        قدرتی زبان کا حکم پارس کریں اور روبوٹ ایکشن لوٹائیں
+        :param command: قدرتی زبان کا حکم
+        :return: RobotAction اوبجیکٹس کی فہرست
+        """
+        # LLM کے لیے سسٹم پرومپٹ کی وضاحت کریں
+        system_prompt = """
+        آپ ایک روبوٹ حکم تشریح کار ہیں۔ آپ کا کام قدرتی زبان کے حکم کو ساختہ روبوٹ ایکشن میں تبدیل کرنا ہے۔
+
+        دستیاب ایکشن کی اقسام:
+        - move_to: مقام پر جانے کے لیے پیرامیٹر (x، y، z متناسق) کے ساتھ
+        - grasp: پیرامیٹر (object_name، position) کے ساتھ چیز کو تھامنا
+        - place: چیز کو مقام پر رکھنا
+        - follow: شخص یا چیز کا پیچھا کرنا
+        - speak: پیغام بولنا
+        - search: ماحول میں چیز تلاش کرنا
+        - greet: شخص کو سلام کرنا
+
+        جواب کی شکل: JSON آبجیکٹ لوٹائیں جس میں 'actions' فیلڈ ہو جس میں ایکشن آبجیکٹس کی ارے ہو۔
+        ہر ایکشن آبجیکٹ میں 'action_type' اور 'parameters' فیلڈز ہونے چاہئیں۔
+
+        مثال:
+        ان پٹ: "براہ کرم کچن میں جائیں اور لال کپ اٹھائیں"
+        آؤٹ پٹ: {
+            "actions": [
+                {
+                    "action_type": "move_to",
+                    "parameters": {"x": 1.0, "y": 2.0, "z": 0.0}
+                },
+                {
+                    "action_type": "grasp",
+                    "parameters": {"object_name": "red cup", "position": [1.0, 2.0, 0.8]}
+                }
+            ]
+        }
+        """
+
+        user_prompt = f"حکم: {command}"
+
+        response = await openai.ChatCompletion.acreate(
+            model=self.model,
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt}
+            ],
+            temperature=0.1,
+            max_tokens=500
+        )
+
+        # JSON جواب نکالیں
+        response_text = response.choices[0].message.content.strip()
+
+        # جواب کو صاف کریں اگر اس میں مارک ڈاؤن فارمیٹنگ ہو
+        if response_text.startswith("```json"):
+            response_text = response_text[7:]  # ```json ہٹائیں
+        if response_text.endswith("```"):
+            response_text = response_text[:-3]  # ``` ہٹائیں
+
+        try:
+            parsed_response = json.loads(response_text)
+            actions_data = parsed_response.get("actions", [])
+
+            # RobotAction اوبجیکٹس میں تبدیل کریں
+            robot_actions = []
+            for action_data in actions_data:
+                action_type = ActionType(action_data["action_type"])
+                parameters = action_data.get("parameters", {})
+                priority = action_data.get("priority", 1)
+
+                robot_action = RobotAction(
+                    action_type=action_type,
+                    parameters=parameters,
+                    priority=priority
+                )
+                robot_actions.append(robot_action)
+
+            # تاریخ میں شامل کریں
+            self.action_history.append({
+                "command": command,
+                "actions": robot_actions
+            })
+
+            return robot_actions
+
+        except json.JSONDecodeError as e:
+            print(f"LLM جواب کو پارس کرنے میں خامی: {e}")
+            print(f"جواب کا متن: {response_text}")
+            return []
+
+    async def execute_command_sequence(self, command: str) -> bool:
+        """
+        حکم کی ترتیب کو پارس اور انجام دیں
+        :param command: قدرتی زبان کا حکم
+        :return: کامیاب ہونے پر True، دیگر صورت میں False
+        """
+        actions = await self.parse_command(command)
+
+        if not actions:
+            print(f"حکم سے کوئی ایکشن نکالا نہیں گیا: {command}")
+            return False
+
+        # ہر ایکشن کو ترتیب سے انجام دیں
+        for action in actions:
+            success = await self.execute_action(action)
+            if not success:
+                print(f"ایکشن انجام دینے میں ناکام: {action}")
+                return False
+
+        return True
+
+    async def execute_action(self, action: RobotAction) -> bool:
+        """
+        ایک روبوٹ ایکشن انجام دیں (جگہ دار نفاذ)
+        حقیقی سسٹم میں، یہ ROS 2 سروسز/کلائنٹس کے ساتھ رابطہ کرے گا
+        :param action: انجام دینے کے لیے RobotAction
+        :return: کامیاب ہونے پر True، دیگر صورت میں False
+        """
+        print(f"ایکشن انجام دیں: {action.action_type.value}")
+        print(f"پیرامیٹر: {action.parameters}")
+
+        # حقیقی نفاذ میں، یہ ROS 2 خدمات کو کال کرے گا
+        # ابھی کے لیے، ہم عمل کی شبیہہ سازی کریں گے
+        if action.action_type == ActionType.MOVE_TO:
+            return await self._execute_move_to(action.parameters)
+        elif action.action_type == ActionType.GRASP:
+            return await self._execute_grasp(action.parameters)
+        elif action.action_type == ActionType.PLACE:
+            return await self._execute_place(action.parameters)
+        elif action.action_type == ActionType.FOLLOW:
+            return await self._execute_follow(action.parameters)
+        elif action.action_type == ActionType.SPEAK:
+            return await self._execute_speak(action.parameters)
+        elif action.action_type == ActionType.SEARCH:
+            return await self._execute_search(action.parameters)
+        elif action.action_type == ActionType.GREET:
+            return await self._execute_greet(action.parameters)
+        else:
+            print(f"نامعلوم ایکشن ٹائپ: {action.action_type}")
+            return False
+
+    # ہر ایکشن ٹائپ کے لیے جگہ دار نفاذ
+    async def _execute_move_to(self, params: Dict) -> bool:
+        """move-to ایکشن انجام دیں"""
+        x = params.get("x", 0.0)
+        y = params.get("y", 0.0)
+        z = params.get("z", 0.0)
+        print(f"متناسق میں جائیں: ({x}, {y}, {z})")
+        # حقیقی نفاذ میں، ROS 2 نیویگیشن سروس کال کریں
+        return True
+
+    async def _execute_grasp(self, params: Dict) -> bool:
+        """گریس ایکشن انجام دیں"""
+        object_name = params.get("object_name", "نامعلوم چیز")
+        position = params.get("position", [0.0, 0.0, 0.0])
+        print(f"{object_name} کو {position} پر تھامیں")
+        # حقیقی نفاذ میں، ROS 2 مینیپولیشن سروس کال کریں
+        return True
+
+    async def _execute_place(self, params: Dict) -> bool:
+        """جگہ ایکشن انجام دیں"""
+        position = params.get("position", [0.0, 0.0, 0.0])
+        print(f"چیز کو {position} پر رکھیں")
+        # حقیقی نفاذ میں، ROS 2 مینیپولیشن سروس کال کریں
+        return True
+
+    async def _execute_follow(self, params: Dict) -> bool:
+        """پیچھا ایکشن انجام دیں"""
+        target = params.get("target", "شخص")
+        print(f"{target} کا پیچھا کریں")
+        # حقیقی نفاذ میں، ROS 2 ٹریکنگ سروس کال کریں
+        return True
+
+    async def _execute_speak(self, params: Dict) -> bool:
+        """بولنا ایکشن انجام دیں"""
+        message = params.get("message", "ہیلو")
+        print(f"بولنا: {message}")
+        # حقیقی نفاذ میں، ٹیکسٹ ٹو اسپیچ سروس کال کریں
+        return True
+
+    async def _execute_search(self, params: Dict) -> bool:
+        """تلاش ایکشن انجام دیں"""
+        object_name = params.get("object_name", "نامعلوم چیز")
+        print(f"{object_name} تلاش کریں")
+        # حقیقی نفاذ میں، ROS 2 چیز کی پہچان سروس کال کریں
+        return True
+
+    async def _execute_greet(self, params: Dict) -> bool:
+        """سalam کرنا ایکشن انجام دیں"""
+        person = params.get("person", "نامعلوم شخص")
+        print(f"{person} کو سلام کریں")
+        # حقیقی نفاذ میں، پہچان اور بولنے کو جوڑیں
+        return True
+
+# مثال کا استعمال
+async def example_usage():
+    llm_bridge = LLMBridge(api_key="your-openai-api-key")
+
+    # مثال کے حکم
+    commands = [
+        "براہ کرم کچن میں جائیں اور لال کپ اٹھائیں",
+        "لاؤنگ روم میں جائیں اور جان کو سلام کریں",
+        "نیلی گیند تلاش کریں اور مجھے لے کر دیں"
+    ]
+
+    for command in commands:
+        print(f"\nحکم کو عمل کریں: {command}")
+        success = await llm_bridge.execute_command_sequence(command)
+        print(f"حکم کا عمل {'کامیاب' if success else 'ناکام'} ہوا")
+```
+
+### VLA لاگ: "نیلی گیند اٹھائیں" کو ROS 2 متناسق میں تبدیل کرنے کے لیے پرومپٹ انجنئرنگ
+
+وژن-زبان-ایکشن (VLA) سسٹم کو قدرتی زبان کے حکم کو مخصوص روبوٹ ایکشن میں تبدیل کرنے کے لیے جامع پرومپٹ انجنئرنگ کی ضرورت ہوتی ہے۔ یہاں دیکھیں کہ "نیلی گیند اٹھائیں" کو ROS 2 متناسق میں کیسے میپ کیا جاتا ہے:
+
+```python
+class VLAPromptEngineer:
+    """
+    وژن-زبان-ایکشن پرومپٹ انجنئرنگ سسٹم
+    """
+    def __init__(self):
+        self.object_recognition_system = ObjectRecognitionSystem()
+        self.kinematics_calculator = KinematicsCalculator()
+
+    def create_vla_prompt(self, command: str, robot_state: Dict, environment_state: Dict) -> str:
+        """
+        VLA پرومپٹ بنائیں جو LLM کو مخصوص ایکشن جنریٹ کرنے کے لیے ہدایت دیتا ہے
+        :param command: قدرتی زبان کا حکم (مثلاً، "نیلی گیند اٹھائیں")
+        :param robot_state: موجودہ روبوٹ کی حالت (پوزیشن، جوائنٹ اینگل، وغیرہ)
+        :param environment_state: موجودہ ماحول کی حالت (چیز کی پوزیشن، وغیرہ)
+        :return: LLM کے لیے ساختہ پرومپٹ
+        """
+        prompt = f"""
+        آپ ایک ہیومنوائڈ روبوٹ کے لیے وژن-زبان-ایکشن (VLA) کوآرڈینیٹر ہیں۔ آپ کا کام قدرتی زبان کے حکم کی تشریح کرنا اور مخصوص، قابلِ عمل ایکشن جنریٹ کرنا ہے۔
+
+        موجودہ روبوٹ کی حالت:
+        {json.dumps(robot_state, indent=2)}
+
+        موجودہ ماحول کی حالت:
+        {json.dumps(environment_state, indent=2)}
+
+        حکم: "{command}"
+
+        تجزیہ کے اقدامات:
+        1. انجام دینے کے لیے ایکشن کی شناخت کریں (مثلاً، گرفت، جانا، بولنا)
+        2. ہدف کی چیز کی شناخت کریں ("نیلی گیند")
+        3. چیز کو ماحول کی حالت میں تلاش کریں
+        4. چیز تک پہنچنے کے لیے ضروری روبوٹ حرکات کا حساب لگائیں
+        5. مخصوص ROS 2 ایکشن کمانڈ جنریٹ کریں
+
+        جواب کی شکل: JSON جس میں "actions" ارے ہو جس میں یہ شامل ہوں:
+        - action_type: ایکشن کی قسم (move_to، grasp، وغیرہ)
+        - parameters: ایکشن کے لیے مخصوص پیرامیٹر
+        - priority: عمل کی ترجیح (1-10)
+
+        گریسنگ کے کاموں کے لیے:
+        - پہلے، ایک ایسی پوزیشن پر جائیں جہاں چیز قابلِ تکمیل ہو
+        - پھر، مخصوص متناسق کے ساتھ گریس ایکشن انجام دیں
+        - روبوٹ کے کنیمیٹک کنٹرینٹس پر غور کریں
+        """
+        return prompt
+
+    def map_command_to_ros_coordinates(self, command: str) -> List[Dict]:
+        """
+        قدرتی زبان کے حکم کو ROS 2 کے مخصوص متناسق میں میپ کریں
+        مثال: "نیلی گیند اٹھائیں" -> [move_to متناسق، grasp ایکشن]
+        """
+        # "نیلی گیند اٹھائیں" کی مثال کا نفاذ
+        if "اتھائیں" in command.lower() and "نیلی گیند" in command.lower():
+            # 1. ماحول میں نیلی گیند تلاش کریں
+            blue_ball_position = self.find_object_position("نیلی گیند")
+
+            # 2. تقریبی پوزیشن کا حساب لگائیں (چیز کے سامنے 10cm)
+            approach_position = self.calculate_approach_position(
+                blue_ball_position,
+                approach_distance=0.1  # 10cm سامنے
+            )
+
+            # 3. گریس پوزیشن کا حساب لگائیں (چیز پر)
+            grasp_position = blue_ball_position
+
+            # 4. ROS 2 ایکشن ترتیب جنریٹ کریں
+            actions = [
+                {
+                    "action_type": "move_to",
+                    "parameters": {
+                        "target_pose": {
+                            "position": approach_position,
+                            "orientation": [0, 0, 0, 1]  # ڈیفالٹ جہت
+                        },
+                        "planner": "nav2"
+                    },
+                    "priority": 5
+                },
+                {
+                    "action_type": "move_to",
+                    "parameters": {
+                        "target_pose": {
+                            "position": grasp_position,
+                            "orientation": [0, 0, 0, 1]
+                        },
+                        "approach_velocity": 0.1  # درستی کے لیے سست رفتار
+                    },
+                    "priority": 6
+                },
+                {
+                    "action_type": "grasp",
+                    "parameters": {
+                        "object_name": "نیلی گیند",
+                        "grasp_type": "precision",
+                        "grasp_pose": grasp_position,
+                        "force_limit": 10.0  # نیوٹن
+                    },
+                    "priority": 7
+                }
+            ]
+
+            return actions
+
+        # مزید حکم کے پیٹرن شامل کریں جیسے ضرورت ہو
+        return []
+
+    def find_object_position(self, object_name: str) -> List[float]:
+        """
+        ماحول میں چیز کی 3D پوزیشن تلاش کریں
+        مشق میں، یہ روبوٹ کے ادراک سسٹم کو کویری کرے گا
+        """
+        # یہ ایک سادہ مثال ہے
+        # مشق میں، کمپیوٹر وژن اور چیز کی پہچان استعمال کریں گے
+        object_positions = {
+            "نیلی گیند": [1.2, 0.5, 0.1],  # x، y، z متناسق
+            "لال کپ": [0.8, -0.3, 0.2],
+            "سبز باکس": [-0.5, 1.0, 0.05]
+        }
+
+        return object_positions.get(object_name.lower(), [0.0, 0.0, 0.0])
+
+    def calculate_approach_position(self, target_position: List[float], approach_distance: float) -> List[float]:
+        """
+        ہدف کے سامنے ایک محفوظ تقریبی پوزیشن کا حساب لگائیں
+        """
+        # سادگی کے لیے، روبوٹ کے سامنے سے تقریب
+        # مشق میں، بہترین تقریبی سمت پر غور کریں
+        approach_pos = target_position.copy()
+        approach_pos[0] -= approach_distance  # سامنے سے تقریب (منفی x)
+
+        return approach_pos
+
+# "نیلی گیند اٹھائیں" کی مثال کا استعمال
+def example_vla_mapping():
+    vla_engineer = VLAPromptEngineer()
+
+    command = "نیلی گیند اٹھائیں"
+    actions = vla_engineer.map_command_to_ros_coordinates(command)
+
+    print(f"حکم: {command}")
+    print("ROS 2 ایکشن جنریٹ کیے گئے:")
+    for i, action in enumerate(actions):
+        print(f"  {i+1}. {action['action_type']}")
+        print(f"     پیرامیٹر: {action['parameters']}")
+        print(f"     ترجیح: {action['priority']}")
+```
+
+### میرمیڈ.جی ایس ڈائیاگرام: گفتگو کا روبوٹ فیڈ بیک لوپ
+
+```mermaid
+graph TD
+    A[وائس ان پٹ: "نیلی گیند اٹھائیں"] --> B[وِسپر: تقریر سے متن]
+    B --> C[LLM: حکم کی تشریح]
+    C --> D[VLA: متناسق میپنگ]
+    D --> E[ROS 2: ایکشن عمل]
+    E --> F[روبوٹ: جسمانی ایکشن]
+    F --> G[سینسر فیڈ بیک: کامیابی/ناکامی]
+    G --> H{ایکشن مکمل؟}
+    H -->|نہیں| I[ایڈجسٹ اور دوبارہ کوشش]
+    H -->|ہاں| J[کامیابی کی اطلاع]
+    I --> D
+    J --> A
+    style A fill:#e1f5fe
+    style B fill:#f3e5f5
+    style C fill:#e8f5e8
+    style D fill:#fff3e0
+    style E fill:#fce4ec
+    style F fill:#f3ebee
+    style G fill:#e8eaf6
+    style H fill:#e0f2f1
+    style I fill:#fff8e1
+    style J fill:#e8f5e8
+```
+
+### Module 1 (ROS 2) تصورات کے ساتھ انضمام
+
+وائس ٹو ایکشن سسٹم Module 1 میں قائم ROS 2 انفراسٹرکچر کے ساتھ انضمام کرتا ہے۔ یہاں دیکھیں کہ ROS 2 نوڈ کے طور پر مکمل سسٹم کو کیسے نافذ کریں:
+
+```python
+import rclpy
+from rclpy.node import Node
+from std_msgs.msg import String
+from geometry_msgs.msg import Pose
+from sensor_msgs.msg import JointState
+from builtin_interfaces.msg import Duration
+from trajectory_msgs.msg import JointTrajectory, JointTrajectoryPoint
+from humanoid_msgs.srv import ExecuteCommand
+import asyncio
+import threading
+
+class VoiceCommandNode(Node):
+    """
+    ROS 2 نوڈ جو وائس پروسیسنگ کو روبوٹ کنٹرول کے ساتھ انضمام کرتا ہے
+    """
+    def __init__(self):
+        super().__init__('voice_command_node')
+
+        # وائس پروسیسنگ کمپوننٹس شروع کریں
+        self.whisper_processor = WhisperVoiceProcessor(api_key="your-api-key")
+        self.llm_bridge = LLMBridge(api_key="your-api-key")
+
+        # پبلشرز اور سبسکرائبرز
+        self.command_pub = self.create_publisher(String, 'voice_commands', 10)
+        self.joint_trajectory_pub = self.create_publisher(JointTrajectory, '/joint_trajectory', 10)
+        self.speech_pub = self.create_publisher(String, '/tts_input', 10)
+
+        # بیرونی حکم کے عمل کے لیے سروس
+        self.command_service = self.create_service(
+            ExecuteCommand,
+            'execute_voice_command',
+            self.execute_command_callback
+        )
+
+        # وائس حکم کو عمل کرنے کے لیے ٹائمر
+        self.process_timer = self.create_timer(1.0, self.process_voice_input)
+
+        self.get_logger().info('وائس کمانڈ نوڈ شروع کیا گیا')
+
+    def execute_command_callback(self, request, response):
+        """
+        حکم کے عمل کے لیے سروس کال بیک
+        """
+        command = request.command
+        self.get_logger().info(f'حکم ملا: {command}')
+
+        # حکم کو بے ترتیب طور پر عمل کریں
+        def async_execute():
+            try:
+                # نئے ایونٹ لوپ میں بے ترتیب عمل چلائیں
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+                success = loop.run_until_complete(
+                    self.llm_bridge.execute_command_sequence(command)
+                )
+                response.success = success
+                response.message = "حکم انجام دیا گیا" if success else "حکم ناکام"
+            except Exception as e:
+                response.success = False
+                response.message = f"خرابی: {str(e)}"
+
+        # الگ تھریڈ میں چلائیں تاکہ بلاک نہ ہو
+        thread = threading.Thread(target=async_execute)
+        thread.start()
+        thread.join()  # مکمل ہونے کا انتظار کریں
+
+        return response
+
+    def process_voice_input(self):
+        """
+        وائس ان پٹ کو عمل کریں (سادہ)
+        مشق میں، یہ مائیکروفون سے آڈیو کے ساتھ رابطہ کرے گا
+        """
+        # یہ ایک سادہ مثال ہے
+        # مشق میں، آپ اصل میں مائیکروفون سے آڈیو کیپچر کریں گے
+        pass
+
+    def publish_joint_trajectory(self, joint_positions, duration=5.0):
+        """
+        جوائنٹ ٹریجکٹری کمانڈ روبوٹ کنٹرولرز کو شائع کریں
+        """
+        trajectory = JointTrajectory()
+        trajectory.joint_names = ["joint1", "joint2", "joint3"]  # اصل جوائنٹ ناموں کی جگہ
+
+        point = JointTrajectoryPoint()
+        point.positions = joint_positions
+        point.time_from_start = Duration(sec=int(duration), nanosec=0)
+
+        trajectory.points.append(point)
+
+        self.joint_trajectory_pub.publish(trajectory)
+
+def main(args=None):
+    rclpy.init(args=args)
+    voice_node = VoiceCommandNode()
+
+    try:
+        rclpy.spin(voice_node)
+    except KeyboardInterrupt:
+        pass
+    finally:
+        voice_node.destroy_node()
+        rclpy.shutdown()
+
+if __name__ == '__main__':
+    main()
+```
+
+### اردو گلوسری ٹرمس
+
+اردو لینگوئسٹ کے لیے، یہاں تکنیکی اصطلاحات ہیں جنہیں مستقل طور پر ترجمہ کیا جانا چاہیے:
+
+- **Natural Language Understanding** → "قدرتی زبان کی سمجھ" (Qudrat-e-Zaban ki Samajh)
+- **Kinematics** → "گتیات" (Gatiat)
+- **Inverse Kinematics** → "معکوس گتیات" (Maakus Gatiat)
+- **Balance Control** → "توازن کنٹرول" (Tazan-e-Kontrol)
+- **Grasping** → "پکڑنا" (Pakarna)
+- **Voice-to-Action** → "آواز سے کارروائی" (Awaz se Kariroai)
+- **Vision-Language-Action** → "وژن-زبان-کارروائی" (Vision-Zaban-Kariroai)
+- **ROS 2** → "ROS 2" (اکرونیم کے طور پر رکھیں)
+- **OpenAI Whisper** → "OpenAI وِسپر" (OpenAI Whisper)
+- **Large Language Model** → "بڑا زبان کا ماڈل" (Bara Zaban ka Model)
+
+### جسمانی AI کی اہمیت: زبان بطور حقیقت کے ساتھ رابطہ
+
+وائس ٹو ایکشن سسٹم انسانی زبان اور جسمانی حقیقت کے درمیان ایک اہم پل کی نمائندگی کرتا ہے۔ یہ روبوٹس کو قدرتی انسانی حکم کو سمجھنے اور انہیں معنی دار جسمانی ایکشن میں تبدیل کرنے کی اجازت دیتا ہے۔ یہ زبان کی پروسیسنگ کو جسمانی مینیپولیشن کی صلاحیات کے ساتھ انضمام کا بنیادی پہلو ہے جو روزمرہ کے کاموں میں انسانوں کی مدد کرنے والے روبوٹس کو بنانے کے لیے ضروری ہے۔
+
+### اگلے اقدامات: کیپسٹون انضمام
+
+کیپسٹون پروجیکٹ میں، ہم Module 1-4 کے تمام تصورات کو انضمام کریں گے تاکہ ایک مکمل خود مختار ہیومنوائڈ سسٹم تیار کیا جا سکے جو وائس حکم کو سمجھ سکے، ایکشن کو منصوبہ بند کر سکے، توازن برقرار رکھ سکے، اور پیچیدہ مینیپولیشن کام انجام دے سکے۔
+
+---
+
+### کلیدی نکات
+
+1. **VLA پائپ لائن**: وائس ان پٹ سے جسمانی ایکشن تک مکمل فلو
+2. **وِسپر انضمام**: OpenAI وِسپر کو تقریر کی پہچان کے لیے کیسے استعمال کریں
+3. **LLM میپنگ**: زبان کو روبوٹ ایکشن میں تبدیل کرنے کی تکنیکیں
+4. **ROS 2 انضمام**: سسٹم کو ROS 2 فریم ورک کے اندر کیسے نافذ کریں
+5. **پرومپٹ انجنئرنگ**: مؤثر زبان سے ایکشن میپنگ کے لیے اہم

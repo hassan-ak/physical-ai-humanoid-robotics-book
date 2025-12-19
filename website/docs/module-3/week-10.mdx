@@ -1,0 +1,1012 @@
+---
+title: "Week 10: Nav2 Integration for Bipedal Navigation"
+sidebar_position: 10
+---
+
+import ActionBar from '@site/src/components/ActionBar/ActionBar';
+
+# Week 10: Nav2 Integration for Bipedal Navigation
+
+<ActionBar />
+
+## Nav2 Integration for Bipedal Humanoid Path Planning from a Startup Perspective
+
+In this final week of Module 3, we'll explore how to integrate Navigation2 (Nav2) with bipedal humanoid robots. Unlike traditional wheeled robots, bipedal robots have unique kinematic constraints that require specialized navigation approaches. We'll focus on costmap configuration and path planning techniques tailored for humanoid locomotion.
+
+### Nav2 Architecture for Humanoid Robots
+
+Navigation2 provides a flexible and extensible navigation framework that can be adapted for humanoid robots. The key difference is that bipedal robots require consideration of foot placement, balance, and dynamic walking patterns.
+
+#### Nav2 Core Components
+
+Nav2 consists of several core components that work together to provide navigation capabilities:
+
+- **Global Planner**: Creates a path from the current location to the goal
+- **Local Planner**: Executes the path while avoiding obstacles and respecting robot dynamics
+- **Controller**: Translates planned motions into actuator commands
+- **Costmap**: Represents obstacles and navigable space
+- **Transform System**: Manages coordinate frame transformations
+
+```python
+# Isaac ROS Nav2 integration example
+import rclpy
+from rclpy.node import Node
+from nav2_msgs.action import NavigateToPose
+from geometry_msgs.msg import PoseStamped
+from action_msgs.msg import GoalStatus
+import math
+
+class HumanoidNav2Node(Node):
+    """
+    Example Nav2 integration for humanoid robots
+    Demonstrates specialized navigation for bipedal locomotion
+    """
+
+    def __init__(self):
+        super().__init__('humanoid_nav2_node')
+
+        # Navigation action client
+        self.nav_client = ActionClient(self, NavigateToPose, 'navigate_to_pose')
+
+        # Subscribe to robot state
+        self.robot_state_sub = self.create_subscription(
+            JointState,
+            'joint_states',
+            self.joint_state_callback,
+            10
+        )
+
+        # Subscribe to IMU for balance feedback
+        self.imu_sub = self.create_subscription(
+            Imu,
+            'imu/data',
+            self.imu_callback,
+            10
+        )
+
+        # Timer for navigation monitoring
+        self.nav_monitor_timer = self.create_timer(0.1, self.navigation_monitor)
+
+        # Humanoid-specific navigation state
+        self.current_pose = None
+        self.balance_state = {'left_foot': 0.0, 'right_foot': 0.0, 'torso': 0.0}
+        self.is_balanced = True
+
+        self.get_logger().info("Humanoid Nav2 node initialized with bipedal-specific parameters")
+        self.get_logger().info("Importance of Physical AI: This demonstrates how AI navigation systems integrate with physical humanoid locomotion")
+
+    def navigate_to_pose(self, x, y, theta):
+        """Send navigation goal for humanoid robot"""
+        goal_msg = NavigateToPose.Goal()
+        goal_msg.pose.header.frame_id = 'map'
+        goal_msg.pose.header.stamp = self.get_clock().now().to_msg()
+        goal_msg.pose.pose.position.x = x
+        goal_msg.pose.pose.position.y = y
+        goal_msg.pose.pose.orientation = self.euler_to_quaternion(0, 0, theta)
+
+        # Wait for action server
+        self.nav_client.wait_for_server()
+
+        # Send goal with humanoid-specific parameters
+        send_goal_future = self.nav_client.send_goal_async(goal_msg)
+        send_goal_future.add_done_callback(self.goal_response_callback)
+
+    def goal_response_callback(self, future):
+        """Handle navigation goal response"""
+        goal_handle = future.result()
+        if not goal_handle.accepted:
+            self.get_logger().info('Goal rejected')
+            return
+
+        self.get_logger().info('Goal accepted')
+        get_result_future = goal_handle.get_result_async()
+        get_result_future.add_done_callback(self.get_result_callback)
+
+    def get_result_callback(self, future):
+        """Handle navigation result"""
+        status = future.result().status
+        if status == GoalStatus.STATUS_SUCCEEDED:
+            self.get_logger().info('Navigation succeeded')
+        else:
+            self.get_logger().info(f'Navigation failed with status: {status}')
+
+    def joint_state_callback(self, msg):
+        """Process joint states for humanoid navigation"""
+        # Extract joint positions for balance calculation
+        # In a real implementation, this would calculate bipedal kinematics
+        pass
+
+    def imu_callback(self, msg):
+        """Process IMU data for balance feedback"""
+        # Calculate balance state from IMU data
+        orientation = msg.orientation
+        self.balance_state['torso'] = self.quaternion_to_roll_pitch_yaw(orientation)[1]  # Pitch angle
+
+        # Update balance status
+        self.is_balanced = abs(self.balance_state['torso']) < 0.2  # Threshold in radians
+
+    def navigation_monitor(self):
+        """Monitor navigation progress and balance"""
+        if not self.is_balanced:
+            self.get_logger().warn('Humanoid robot is unbalanced during navigation')
+            # In a real implementation, this would trigger recovery behavior
+
+    def euler_to_quaternion(self, roll, pitch, yaw):
+        """Convert Euler angles to quaternion"""
+        import math
+        cy = math.cos(yaw * 0.5)
+        sy = math.sin(yaw * 0.5)
+        cp = math.cos(pitch * 0.5)
+        sp = math.sin(pitch * 0.5)
+        cr = math.cos(roll * 0.5)
+        sr = math.sin(roll * 0.5)
+
+        q = [0] * 4
+        q[0] = cy * cp * cr + sy * sp * sr  # w
+        q[1] = cy * cp * sr - sy * sp * cr  # x
+        q[2] = sy * cp * sr + cy * sp * cr  # y
+        q[3] = sy * cp * cr - cy * sp * sr  # z
+        return q
+
+    def quaternion_to_roll_pitch_yaw(self, q):
+        """Convert quaternion to Euler angles"""
+        import math
+        # Normalize quaternion
+        norm = math.sqrt(q.w*q.w + q.x*q.x + q.y*q.y + q.z*q.z)
+        q.w /= norm
+        q.x /= norm
+        q.y /= norm
+        q.z /= norm
+
+        # Roll (x-axis rotation)
+        sinr_cosp = 2 * (q.w * q.x + q.y * q.z)
+        cosr_cosp = 1 - 2 * (q.x * q.x + q.y * q.y)
+        roll = math.atan2(sinr_cosp, cosr_cosp)
+
+        # Pitch (y-axis rotation)
+        sinp = 2 * (q.w * q.y - q.z * q.x)
+        if abs(sinp) >= 1:
+            pitch = math.copysign(math.pi / 2, sinp)  # Use 90 degrees if out of range
+        else:
+            pitch = math.asin(sinp)
+
+        # Yaw (z-axis rotation)
+        siny_cosp = 2 * (q.w * q.z + q.x * q.y)
+        cosy_cosp = 1 - 2 * (q.y * q.y + q.z * q.z)
+        yaw = math.atan2(siny_cosp, cosy_cosp)
+
+        return [roll, pitch, yaw]
+
+
+def main(args=None):
+    rclpy.init(args=args)
+
+    nav2_node = HumanoidNav2Node()
+
+    try:
+        # Example: Navigate to position (2.0, 1.0) facing 0 radians
+        # nav2_node.navigate_to_pose(2.0, 1.0, 0.0)
+        rclpy.spin(nav2_node)
+    except KeyboardInterrupt:
+        print("Humanoid Nav2 node stopped by user")
+    finally:
+        nav2_node.destroy_node()
+        rclpy.shutdown()
+
+
+if __name__ == '__main__':
+    main()
+```
+
+### Technical Guide on Nav2 Costmaps for Humanoid Balance
+
+Costmaps in Nav2 are critical for humanoid navigation as they must account for the unique kinematic constraints of bipedal locomotion. Unlike wheeled robots, humanoid robots need to consider:
+
+- **Foot placement**: Where each foot can safely be placed
+- **Balance constraints**: Maintaining center of mass within support polygon
+- **Step size limitations**: Maximum distance between consecutive foot placements
+- **Terrain traversability**: Ability to walk on different surface types
+
+#### Costmap Configuration for Bipedal Robots
+
+```yaml
+# Costmap configuration for humanoid robots
+global_costmap:
+  global_costmap:
+    ros__parameters:
+      update_frequency: 1.0
+      publish_frequency: 1.0
+      resolution: 0.05  # Fine resolution for foot placement
+      robot_radius: 0.3  # Account for robot footprint including legs
+      static_map: true
+      rolling_window: false
+      plugins: ["static_layer", "obstacle_layer", "inflation_layer"]
+
+      inflation_layer:
+        enabled: true
+        cost_scaling_factor: 3.0  # Increase for humanoid safety
+        inflation_radius: 0.5     # Larger inflation for bipedal stability
+
+local_costmap:
+  local_costmap:
+    ros__parameters:
+      update_frequency: 5.0
+      publish_frequency: 2.0
+      resolution: 0.025  # Very fine resolution for precise foot placement
+      robot_radius: 0.2  # Smaller radius for local planning
+      static_map: false
+      rolling_window: true
+      width: 4.0
+      height: 4.0
+      plugins: ["obstacle_layer", "voxel_layer", "inflation_layer"]
+
+      inflation_layer:
+        enabled: true
+        cost_scaling_factor: 5.0  # Higher scaling for local safety
+        inflation_radius: 0.3     # Local inflation for step planning
+```
+
+### Bipedal Kinematic Constraints in Nav2 Configuration
+
+When configuring Nav2 for bipedal humanoid robots, special attention must be paid to kinematic constraints that affect path planning:
+
+- **Step height limitations**: Maximum vertical step the robot can take
+- **Step width constraints**: Maximum horizontal distance between foot placements
+- **Turning radius**: Minimum turning radius based on leg configuration
+- **Support polygon**: Area where feet must be placed to maintain balance
+
+### Connection Between Perception and Navigation Systems
+
+The integration between perception and navigation systems is crucial for humanoid robots. The perception system provides information about the environment (obstacles, terrain type, passable areas) which the navigation system uses to plan safe paths.
+
+```python
+# Example of perception-to-navigation integration
+class PerceptionToNavigationIntegrator(Node):
+    """
+    Integrates perception data with navigation system for humanoid robots
+    """
+
+    def __init__(self):
+        super().__init__('perception_to_nav_integrator')
+
+        # Subscribe to perception outputs
+        self.obstacle_sub = self.create_subscription(
+            ObstacleArrayMsg,
+            'perception/obstacles',
+            self.obstacle_callback,
+            10
+        )
+
+        # Subscribe to terrain classification
+        self.terrain_sub = self.create_subscription(
+            TerrainClassification,
+            'perception/terrain',
+            self.terrain_callback,
+            10
+        )
+
+        # Service to update costmaps based on perception data
+        self.costmap_update_service = self.create_service(
+            UpdateCostmap,
+            'perception/update_costmap',
+            self.update_costmap_callback
+        )
+
+        self.get_logger().info("Perception-to-navigation integrator initialized")
+
+    def obstacle_callback(self, msg):
+        """Process obstacle detections for navigation costmap"""
+        # Update local/global costmaps with obstacle information
+        # This would typically call Nav2's costmap update mechanisms
+
+    def terrain_callback(self, msg):
+        """Process terrain classifications for navigation"""
+        # Update costmap with terrain traversability information
+        # Different costs for stairs, grass, gravel, etc.
+
+    def update_costmap_callback(self, request, response):
+        """Service callback to update costmaps based on perception"""
+        # Integrate perception data into navigation costmaps
+        response.success = True
+        return response
+```
+
+### Technical Guide on Nav2 Costmaps for Humanoid Balance
+
+Costmaps in Nav2 are critical for humanoid navigation as they must account for the unique kinematic constraints of bipedal locomotion. Unlike wheeled robots, humanoid robots need to consider:
+
+- **Foot placement**: Where each foot can safely be placed
+- **Balance constraints**: Maintaining center of mass within support polygon
+- **Step size limitations**: Maximum distance between consecutive foot placements
+- **Terrain traversability**: Ability to walk on different surface types
+
+#### Advanced Costmap Configuration for Bipedal Robots
+
+```yaml
+# Advanced costmap configuration for humanoid robots
+global_costmap:
+  global_costmap:
+    ros__parameters:
+      update_frequency: 1.0
+      publish_frequency: 1.0
+      resolution: 0.05  # Fine resolution for foot placement
+      robot_radius: 0.3  # Account for robot footprint including legs
+      static_map: true
+      rolling_window: false
+      plugins: ["static_layer", "obstacle_layer", "inflation_layer", "footprint_layer"]
+
+      # Static layer configuration
+      static_layer:
+        plugin: "nav2_costmap_2d::StaticLayer"
+        map_topic: "map"
+        transform_tolerance: 0.5
+        max_occ: 100
+        free_thresh_default: 0.2
+        occupied_thresh: 0.65
+
+      # Obstacle layer configuration for humanoid-specific obstacles
+      obstacle_layer:
+        plugin: "nav2_costmap_2d::ObstacleLayer"
+        enabled: true
+        observation_sources: scan
+        scan:
+          topic: /laser_scan
+          max_obstacle_height: 2.0
+          clearing: true
+          marking: true
+          data_type: "LaserScan"
+          raytrace_max_range: 5.0
+          raytrace_min_range: 0.0
+          obstacle_max_range: 2.5
+          obstacle_min_range: 0.0
+
+      # Inflation layer with humanoid-specific parameters
+      inflation_layer:
+        plugin: "nav2_costmap_2d::InflationLayer"
+        enabled: true
+        cost_scaling_factor: 3.0  # Increase for humanoid safety
+        inflation_radius: 0.5     # Larger inflation for bipedal stability
+        inflate_unknown: false
+        # Footprint-specific inflation
+        footprint_padding: 0.1
+
+      # Humanoid-specific footprint layer
+      footprint_layer:
+        plugin: "nav2_costmap_2d::FootprintLayer"
+        enabled: true
+        footprint_topic: "footprint"
+        footprint_padding: 0.05
+        robot_base_frame: "base_link"
+
+local_costmap:
+  local_costmap:
+    ros__parameters:
+      update_frequency: 5.0
+      publish_frequency: 2.0
+      resolution: 0.025  # Very fine resolution for precise foot placement
+      robot_radius: 0.2  # Smaller radius for local planning
+      static_map: false
+      rolling_window: true
+      width: 4.0
+      height: 4.0
+      plugins: ["obstacle_layer", "voxel_layer", "inflation_layer", "bipedal_layer"]
+
+      # Local obstacle layer
+      obstacle_layer:
+        plugin: "nav2_costmap_2d::ObstacleLayer"
+        enabled: true
+        observation_sources: scan
+        scan:
+          topic: /laser_scan
+          max_obstacle_height: 2.0
+          clearing: true
+          marking: true
+          data_type: "LaserScan"
+          raytrace_max_range: 3.0
+          raytrace_min_range: 0.0
+          obstacle_max_range: 2.5
+          obstacle_min_range: 0.0
+
+      # Voxel layer for 3D obstacle representation
+      voxel_layer:
+        plugin: "nav2_costmap_2d::VoxelLayer"
+        enabled: true
+        publish_voxel_map: true
+        origin_z: 0.0
+        z_resolution: 0.2
+        z_voxels: 10
+        max_obstacle_height: 2.0
+        mark_threshold: 0
+        observation_sources: point_cloud_sensor
+        point_cloud_sensor:
+          topic: /point_cloud
+          max_obstacle_height: 2.0
+          clearing: true
+          marking: true
+          data_type: "PointCloud2"
+          min_obstacle_height: 0.0
+          obstacle_range: 2.5
+          raytrace_range: 3.0
+
+      # Inflation layer with higher parameters for local safety
+      inflation_layer:
+        plugin: "nav2_costmap_2d::InflationLayer"
+        enabled: true
+        cost_scaling_factor: 5.0  # Higher scaling for local safety
+        inflation_radius: 0.3     # Local inflation for step planning
+        inflate_unknown: false
+
+      # Bipedal-specific layer for step planning
+      bipedal_layer:
+        plugin: "nav2_costmap_2d::BipedalLayer"
+        enabled: true
+        step_height_limit: 0.15   # Maximum step height humanoid can handle
+        step_width_limit: 0.5     # Maximum step width for stability
+        support_polygon_margin: 0.1  # Margin for support polygon calculation
+        stance_phase_duration: 0.8  # Duration for stable stance phase
+```
+
+### Bipedal Kinematic Constraints in Nav2 Configuration
+
+When configuring Nav2 for bipedal humanoid robots, special attention must be paid to kinematic constraints that affect path planning:
+
+- **Step height limitations**: Maximum vertical step the robot can take
+- **Step width constraints**: Maximum horizontal distance between foot placements
+- **Turning radius**: Minimum turning radius based on leg configuration
+- **Support polygon**: Area where feet must be placed to maintain balance
+
+#### Implementing Bipedal Constraints in Nav2
+
+```python
+# Python implementation of bipedal constraints for Nav2
+import rclpy
+from rclpy.node import Node
+from geometry_msgs.msg import PoseStamped, Point
+from nav_msgs.msg import Path
+from builtin_interfaces.msg import Duration
+import math
+import numpy as np
+
+class BipedalConstraintManager(Node):
+    """
+    Manages bipedal kinematic constraints for Nav2 path planning
+    """
+
+    def __init__(self):
+        super().__init__('bipedal_constraint_manager')
+
+        # Bipedal-specific parameters
+        self.step_height_limit = 0.15  # meters
+        self.step_width_limit = 0.5    # meters
+        self.turning_radius = 0.4      # meters
+        self.leg_length = 0.8          # meters
+        self.support_polygon_margin = 0.1  # meters
+
+        # Publishers and subscribers
+        self.path_sub = self.create_subscription(
+            Path,
+            'global_plan',
+            self.path_callback,
+            10
+        )
+
+        self.constrained_path_pub = self.create_publisher(
+            Path,
+            'constrained_global_plan',
+            10
+        )
+
+        # Timer for constraint validation
+        self.constraint_timer = self.create_timer(0.1, self.validate_constraints)
+
+        self.get_logger().info("Bipedal constraint manager initialized")
+        self.get_logger().info("Importance of Physical AI: This demonstrates how AI navigation systems account for physical robot constraints")
+
+    def path_callback(self, msg):
+        """Process global path with bipedal constraints"""
+        constrained_path = self.apply_bipedal_constraints(msg)
+        self.constrained_path_pub.publish(constrained_path)
+
+    def apply_bipedal_constraints(self, original_path):
+        """Apply bipedal kinematic constraints to path"""
+        constrained_path = Path()
+        constrained_path.header = original_path.header
+
+        # Apply constraints to each point in the path
+        for i, pose in enumerate(original_path.poses):
+            if i == 0:
+                # First pose remains unchanged (current position)
+                constrained_path.poses.append(pose)
+            else:
+                # Calculate constraints for this pose based on previous
+                constrained_pose = self.constrain_pose(pose, constrained_path.poses[-1])
+
+                # Only add if pose is valid under constraints
+                if self.is_pose_valid(constrained_pose, constrained_path.poses[-1]):
+                    constrained_path.poses.append(constrained_pose)
+
+        return constrained_path
+
+    def constrain_pose(self, target_pose, current_pose):
+        """Apply bipedal constraints to a target pose"""
+        constrained_pose = PoseStamped()
+        constrained_pose.header = target_pose.header
+
+        # Calculate the displacement from current pose
+        dx = target_pose.pose.position.x - current_pose.pose.position.x
+        dy = target_pose.pose.position.y - current_pose.pose.position.y
+        distance = math.sqrt(dx*dx + dy*dy)
+
+        # Apply step width limit
+        if distance > self.step_width_limit:
+            # Scale the displacement to fit within step limit
+            scale_factor = self.step_width_limit / distance
+            dx *= scale_factor
+            dy *= scale_factor
+
+        # Apply turning radius constraint
+        # Calculate the angle change from previous movement direction
+        if len(self.get_current_path()) > 1:
+            prev_dx = current_pose.pose.position.x - self.get_current_path()[-2].pose.position.x
+            prev_dy = current_pose.pose.position.y - self.get_current_path()[-2].pose.position.y
+            prev_angle = math.atan2(prev_dy, prev_dx)
+            target_angle = math.atan2(dy, dx)
+
+            angle_diff = abs(target_angle - prev_angle)
+            if angle_diff > math.pi:
+                angle_diff = 2 * math.pi - angle_diff
+
+            # Limit turning angle to respect turning radius
+            max_turn_angle = self.step_width_limit / self.turning_radius
+            if angle_diff > max_turn_angle:
+                # Adjust target direction to respect turning constraint
+                adjusted_angle = prev_angle + max_turn_angle if angle_diff > 0 else prev_angle - max_turn_angle
+                dx = math.cos(adjusted_angle) * min(distance, self.step_width_limit)
+                dy = math.sin(adjusted_angle) * min(distance, self.step_width_limit)
+
+        # Update position
+        constrained_pose.pose.position.x = current_pose.pose.position.x + dx
+        constrained_pose.pose.position.y = current_pose.pose.position.y + dy
+        constrained_pose.pose.position.z = target_pose.pose.position.z  # Keep original Z
+
+        # Copy orientation
+        constrained_pose.pose.orientation = target_pose.pose.orientation
+
+        return constrained_pose
+
+    def is_pose_valid(self, target_pose, current_pose):
+        """Check if target pose is valid under bipedal constraints"""
+        # Check step width constraint
+        dx = target_pose.pose.position.x - current_pose.pose.position.x
+        dy = target_pose.pose.position.y - current_pose.pose.position.y
+        distance = math.sqrt(dx*dx + dy*dy)
+
+        if distance > self.step_width_limit:
+            return False
+
+        # Check step height constraint
+        dz = abs(target_pose.pose.position.z - current_pose.pose.position.z)
+        if dz > self.step_height_limit:
+            return False
+
+        return True
+
+    def get_current_path(self):
+        """Helper to get current path for direction calculation"""
+        # This would typically interface with the global planner
+        # For this example, we'll return a dummy path
+        return []
+
+    def validate_constraints(self):
+        """Validate current robot state against bipedal constraints"""
+        # Check if robot is currently in a stable configuration
+        # This would interface with robot state information
+        pass
+
+
+def main(args=None):
+    rclpy.init(args=args)
+
+    constraint_manager = BipedalConstraintManager()
+
+    try:
+        rclpy.spin(constraint_manager)
+    except KeyboardInterrupt:
+        print("Bipedal constraint manager stopped by user")
+    finally:
+        constraint_manager.destroy_node()
+        rclpy.shutdown()
+
+
+if __name__ == '__main__':
+    main()
+```
+
+### Isaac Sim Python API Examples for Nav2 Integration
+
+```python
+# Isaac Sim Python API examples for Nav2 integration
+import omni
+from omni.isaac.core import World
+from omni.isaac.core.utils.prims import create_prim
+from omni.isaac.core.utils.stage import add_reference_to_stage
+from omni.isaac.core.utils.transformations import quat_from_euler_angles
+import numpy as np
+import carb
+
+class IsaacSimNav2Integrator:
+    """
+    Demonstrates Nav2 integration with Isaac Sim for humanoid navigation
+    """
+
+    def __init__(self):
+        self.world = World(stage_units_in_meters=1.0)
+
+        # Create humanoid robot in simulation
+        self.create_humanoid_robot()
+
+        # Set up navigation environment
+        self.setup_navigation_environment()
+
+        # Configure Nav2 integration
+        self.configure_nav2_integration()
+
+        carb.log_info("Isaac Sim Nav2 integrator initialized")
+        carb.log_info("Importance of Physical AI: This demonstrates how AI navigation systems integrate with physical simulation")
+
+    def create_humanoid_robot(self):
+        """Create a humanoid robot model for navigation simulation"""
+
+        # Create base link
+        create_prim(
+            prim_path="/World/HumanoidRobot/base_link",
+            prim_type="Sphere",
+            position=[0.0, 0.0, 0.8],  # Start at standing height
+            attributes={"radius": 0.1}
+        )
+
+        # Create legs for bipedal locomotion
+        # Left leg
+        create_prim(
+            prim_path="/World/HumanoidRobot/left_thigh",
+            prim_type="Capsule",
+            position=[0.05, 0.0, 0.5],
+            orientation=quat_from_euler_angles(np.radians([90, 0, 0])),
+            attributes={"radius": 0.05, "height": 0.4}
+        )
+
+        create_prim(
+            prim_path="/World/HumanoidRobot/right_thigh",
+            prim_type="Capsule",
+            position=[-0.05, 0.0, 0.5],
+            orientation=quat_from_euler_angles(np.radians([90, 0, 0])),
+            attributes={"radius": 0.05, "height": 0.4}
+        )
+
+        # Add reference to a more detailed humanoid model (if available)
+        # add_reference_to_stage(usd_path="path/to/humanoid_model.usd", prim_path="/World/HumanoidRobot/model")
+
+        carb.log_info("Humanoid robot model created in Isaac Sim")
+
+    def setup_navigation_environment(self):
+        """Set up navigation environment with obstacles and waypoints"""
+
+        # Create ground plane
+        create_prim(
+            prim_path="/World/GroundPlane",
+            prim_type="Plane",
+            position=[0, 0, 0],
+            attributes={"size": 10.0}
+        )
+
+        # Add navigation obstacles
+        obstacles = [
+            {"name": "obstacle1", "position": [2.0, 0.0, 0.2], "size": [0.5, 0.5, 0.4]},
+            {"name": "obstacle2", "position": [-1.5, 1.5, 0.3], "size": [0.3, 0.8, 0.6]},
+            {"name": "obstacle3", "position": [1.0, -2.0, 0.25], "size": [0.6, 0.4, 0.5]}
+        ]
+
+        for obs in obstacles:
+            create_prim(
+                prim_path=f"/World/NavigateArea/{obs['name']}",
+                prim_type="Cube",
+                position=obs['position'],
+                attributes={"size": obs['size']}
+            )
+
+        # Create navigation waypoints
+        waypoints = [
+            {"name": "waypoint1", "position": [3.0, 0.0, 0.1]},
+            {"name": "waypoint2", "position": [3.0, 2.0, 0.1]},
+            {"name": "waypoint3", "position": [0.0, 3.0, 0.1]},
+            {"name": "goal", "position": [-2.0, -2.0, 0.1]}
+        ]
+
+        for wp in waypoints:
+            create_prim(
+                prim_path=f"/World/NavigateArea/{wp['name']}",
+                prim_type="Sphere",
+                position=wp['position'],
+                attributes={"radius": 0.1}
+            )
+
+        carb.log_info("Navigation environment set up with obstacles and waypoints")
+
+    def configure_nav2_integration(self):
+        """Configure Nav2 integration parameters for Isaac Sim"""
+
+        # Set up Nav2-specific parameters for simulation
+        settings = carb.settings.get_settings()
+
+        # Configure simulation time parameters to match real-time navigation
+        settings.set("/physics/timeStepsPerSecond", 100)  # High fidelity for navigation
+        settings.set("/app/runLoops/updateRateLimitEnabled", False)
+
+        # Configure rendering settings for navigation simulation
+        settings.set("/rtx/raytracing/enable", False)  # Disable RTX for performance
+        settings.set("/renderer/maxFPS", 60)  # Limit FPS for consistent timing
+
+        carb.log_info("Nav2 integration parameters configured for Isaac Sim")
+
+    def simulate_navigation_scenario(self):
+        """Simulate a navigation scenario with humanoid robot"""
+
+        # Reset the world to initial state
+        self.world.reset()
+
+        # Define navigation goal
+        goal_position = [-2.0, -2.0, 0.1]  # Position of "goal" waypoint
+
+        carb.log_info(f"Starting navigation simulation to goal: {goal_position}")
+
+        # In a real implementation, this would interface with Nav2 to execute navigation
+        # For simulation purposes, we'll just log the process
+        for step in range(100):  # Simulate 100 steps
+            # Update robot position based on navigation plan
+            # Check for collisions
+            # Validate bipedal constraints
+
+            if step % 20 == 0:
+                carb.log_info(f"Navigation simulation step {step}/100")
+
+        carb.log_info("Navigation simulation completed")
+
+    def export_navigation_map(self):
+        """Export navigation map for use with real Nav2"""
+
+        # In a real implementation, this would generate a map file
+        # compatible with Nav2 based on the Isaac Sim environment
+        carb.log_info("Navigation map exported in Nav2-compatible format")
+
+        # This would typically export:
+        # - Occupancy grid map
+        # - Costmap parameters
+        # - Robot-specific navigation parameters
+        # - Waypoint information
+
+
+# Example usage:
+# integrator = IsaacSimNav2Integrator()
+# integrator.simulate_navigation_scenario()
+# integrator.export_navigation_map()
+```
+
+### Connection Between Perception and Navigation Systems for Humanoid Robots
+
+The integration between perception and navigation systems is crucial for humanoid robots. The perception system provides information about the environment (obstacles, terrain type, passable areas) which the navigation system uses to plan safe paths.
+
+```python
+# Example of perception-to-navigation integration for humanoid robots
+import rclpy
+from rclpy.node import Node
+from sensor_msgs.msg import LaserScan, PointCloud2
+from nav_msgs.msg import OccupancyGrid, Path
+from geometry_msgs.msg import PoseStamped
+from visualization_msgs.msg import MarkerArray
+import numpy as np
+
+class HumanoidPerceptionToNavigationIntegrator(Node):
+    """
+    Integrates perception data with navigation system for humanoid robots
+    Specifically handles bipedal constraints and balance requirements
+    """
+
+    def __init__(self):
+        super().__init__('humanoid_perception_to_nav_integrator')
+
+        # Subscribe to perception outputs
+        self.lidar_sub = self.create_subscription(
+            LaserScan,
+            'perception/lidar_scan',
+            self.lidar_callback,
+            10
+        )
+
+        self.pointcloud_sub = self.create_subscription(
+            PointCloud2,
+            'perception/pointcloud',
+            self.pointcloud_callback,
+            10
+        )
+
+        self.terrain_sub = self.create_subscription(
+            OccupancyGrid,  # Assuming terrain classification is published as occupancy grid
+            'perception/terrain_classification',
+            self.terrain_callback,
+            10
+        )
+
+        # Subscribe to robot state for balance feedback
+        self.imu_sub = self.create_subscription(
+            Imu,
+            'sensors/imu',
+            self.imu_callback,
+            10
+        )
+
+        # Publishers for navigation system
+        self.local_costmap_pub = self.create_publisher(
+            OccupancyGrid,
+            'local_costmap/costmap',
+            10
+        )
+
+        self.global_costmap_pub = self.create_publisher(
+            OccupancyGrid,
+            'global_costmap/costmap',
+            10
+        )
+
+        self.visualization_pub = self.create_publisher(
+            MarkerArray,
+            'navigation_visualization',
+            10
+        )
+
+        # Store robot state information
+        self.robot_position = np.array([0.0, 0.0, 0.0])
+        self.balance_state = {'left_foot': 0.0, 'right_foot': 0.0, 'torso': 0.0}
+        self.is_balanced = True
+
+        # Bipedal-specific parameters
+        self.step_height_limit = 0.15  # meters
+        self.step_width_limit = 0.5    # meters
+        self.support_polygon_margin = 0.1  # meters
+
+        self.get_logger().info("Humanoid Perception-to-Navigation integrator initialized")
+        self.get_logger().info("Accounting for bipedal constraints and balance requirements")
+
+    def lidar_callback(self, msg):
+        """Process LIDAR data for navigation costmap updates"""
+        # Convert LIDAR data to local costmap considering bipedal constraints
+        local_map = self.lidar_to_local_costmap(msg)
+
+        # Apply bipedal-specific constraints to costmap
+        constrained_map = self.apply_bipedal_constraints_to_map(local_map)
+
+        # Publish updated local costmap
+        self.local_costmap_pub.publish(constrained_map)
+
+    def pointcloud_callback(self, msg):
+        """Process point cloud data for 3D navigation planning"""
+        # Extract ground plane and obstacles from point cloud
+        ground_points, obstacle_points = self.extract_ground_and_obstacles(msg)
+
+        # Update costmaps based on 3D information
+        self.update_3d_costmaps(ground_points, obstacle_points)
+
+    def terrain_callback(self, msg):
+        """Process terrain classification for navigation planning"""
+        # Update costmaps with terrain traversability information
+        # Different costs for stairs, grass, gravel, etc., based on humanoid capabilities
+        self.update_terrain_costs(msg)
+
+    def imu_callback(self, msg):
+        """Process IMU data for balance-aware navigation"""
+        # Calculate current balance state
+        self.update_balance_state(msg)
+
+        # Adjust navigation behavior based on balance state
+        if not self.is_balanced:
+            self.get_logger().warn("Humanoid robot is unbalanced, adjusting navigation behavior")
+            self.adjust_navigation_for_balance()
+
+    def apply_bipedal_constraints_to_map(self, original_map):
+        """Apply bipedal kinematic constraints to costmap"""
+        # Modify costmap based on humanoid-specific constraints:
+        # - Step height limitations
+        # - Step width constraints
+        # - Support polygon requirements
+        # - Balance considerations
+
+        # Example: Increase costs for areas that violate step width limits
+        constrained_map = original_map
+        # Implementation would modify cost values based on bipedal constraints
+
+        return constrained_map
+
+    def update_balance_state(self, imu_msg):
+        """Update robot's balance state based on IMU data"""
+        # Calculate balance from IMU orientation data
+        orientation = imu_msg.orientation
+        roll, pitch, yaw = self.quaternion_to_euler(orientation)
+
+        self.balance_state['torso'] = pitch  # Forward/backward lean
+        self.balance_state['left_foot'] = roll  # Side tilt
+
+        # Determine if robot is within balance limits
+        self.is_balanced = (
+            abs(self.balance_state['torso']) < 0.2 and  # 11.4 degree lean tolerance
+            abs(self.balance_state['left_foot']) < 0.15  # 8.6 degree tilt tolerance
+        )
+
+    def adjust_navigation_for_balance(self):
+        """Adjust navigation behavior when robot is unbalanced"""
+        # Implement recovery behaviors when robot is unbalanced
+        # This might include:
+        # - Slowing down navigation speed
+        # - Increasing safety margins
+        # - Planning more conservative paths
+        # - Initiating balance recovery procedures
+        pass
+
+    def quaternion_to_euler(self, q):
+        """Convert quaternion to Euler angles"""
+        import math
+        # Normalize quaternion
+        norm = math.sqrt(q.w*q.w + q.x*q.x + q.y*q.y + q.z*q.z)
+        q.w /= norm
+        q.x /= norm
+        q.y /= norm
+        q.z /= norm
+
+        # Convert to Euler angles (roll, pitch, yaw)
+        sinr_cosp = 2 * (q.w * q.x + q.y * q.z)
+        cosr_cosp = 1 - 2 * (q.x * q.x + q.y * q.y)
+        roll = math.atan2(sinr_cosp, cosr_cosp)
+
+        sinp = 2 * (q.w * q.y - q.z * q.x)
+        if abs(sinp) >= 1:
+            pitch = math.copysign(math.pi / 2, sinp)  # Use 90 degrees if out of range
+        else:
+            pitch = math.asin(sinp)
+
+        siny_cosp = 2 * (q.w * q.z + q.x * q.y)
+        cosy_cosp = 1 - 2 * (q.y * q.y + q.z * q.z)
+        yaw = math.atan2(siny_cosp, cosy_cosp)
+
+        return roll, pitch, yaw
+
+
+def main(args=None):
+    rclpy.init(args=args)
+
+    integrator = HumanoidPerceptionToNavigationIntegrator()
+
+    try:
+        rclpy.spin(integrator)
+    except KeyboardInterrupt:
+        print("Humanoid Perception-to-Navigation integrator stopped by user")
+    finally:
+        integrator.destroy_node()
+        rclpy.shutdown()
+
+
+if __name__ == '__main__':
+    main()
+```
+
+### Hardware Requirements and Jetson Orin Considerations for Navigation
+
+According to the Robotics-Hardware-Glossary, the Jetson Orin platform provides exceptional capabilities for running Nav2 navigation stacks:
+
+- **GPU Acceleration**: 2048-core NVIDIA Ampere GPU enables real-time path planning and costmap processing
+- **DLA**: Dedicated Deep Learning Accelerator for neural network-based perception
+- **PVA**: Programmable Vision Accelerator for efficient sensor processing
+- **Memory**: 32GB LPDDR5x provides ample space for large navigation maps and simultaneous processing
+
+These capabilities make Jetson Orin ideal for humanoid navigation systems that must process perception data and plan paths in real-time while maintaining balance and stability.
+
+### Importance of Physical AI: Integrated Navigation Systems
+
+This Nav2 integration example demonstrates how AI navigation systems can be specifically adapted for humanoid robots, considering their unique kinematic constraints and balance requirements. The integration of perception and navigation systems enables humanoid robots to navigate complex environments while maintaining stability and safety, essential for real-world deployment. The combination of Isaac Sim simulation with real hardware constraints ensures that navigation algorithms developed in simulation can be effectively deployed on physical humanoid platforms.

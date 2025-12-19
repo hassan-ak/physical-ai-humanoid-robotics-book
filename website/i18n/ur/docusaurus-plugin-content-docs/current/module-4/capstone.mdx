@@ -1,0 +1,854 @@
+---
+title: "کیپسٹون: خود مختار ہیومنوائڈ سیمیولیشن"
+sidebar_position: 14
+---
+
+import ActionBar from '@site/src/components/ActionBar/ActionBar';
+
+# کیپسٹون: خود مختار ہیومنوائڈ سیمیولیشن
+
+<ActionBar />
+
+## خود مختار ہیومنوائڈ کیپسٹون پروجیکٹ کا تعارف
+
+فزیکل AI اور ہیومنوائڈ روبوٹکس کورس کے کیپسٹون پروجیکٹ میں خوش آمدید! یہ پروجیکٹ Module 1-4 میں سیکھے گئے تمام تصورات کو ایک مکمل خود مختار ہیومنوائڈ سسٹم میں انضمام کرتا ہے۔ آپ Module 1 کے ROS 2 تصورات کو Module 2 کے ہیومنوائڈ ڈائی نامکس کے ساتھ انضمام کریں گے، Module 3 سے توازن کنٹرول اور ان ورس کنیمیٹکس نافذ کریں گے، Module 4 سے وائس ٹو ایکشن صلاحیات شامل کریں گے، اور ایک مکمل خود مختار سسٹم تخلیق کریں گے جو قدرتی زبان کے حکم کو سمجھ سکے اور پیچیدہ مینیپولیشن کام انجام دے سکے ایک حقیقی ماحول میں۔
+
+### پروجیکٹ کا جائزہ
+
+اس کیپسٹون پروجیکٹ میں، آپ:
+
+1. Module 1 سے ROS 2 تصورات کو Module 2 کے ہیومنوائڈ ڈائی نامکس کے ساتھ انضمام کریں گے
+2. Module 3 سے توازن کنٹرول اور ان ورس کنیمیٹکس نافذ کریں گے
+3. Module 4 سے وائس ٹو ایکشن صلاحیات شامل کریں گے
+4. ایک مکمل خود مختار سسٹم تخلیق کریں گے جو قدرتی زبان کے حکم کو جواب دے سکے
+
+### سیکھنے کے اہداف
+
+اس کیپسٹون پروجیکٹ کو مکمل کرنے سے، آپ:
+
+- متعدد روبوٹکس ذیلی نظام کے انضمام کا جائزہ لیں گے
+- مشق میں VLA (وژن-زبان-ایکشن) اصول لاگو کریں گے
+- سچے خود مختار روبوٹس بنانے کے چیلنجوں کو سمجھیں گے
+- پیچیدہ سسٹم انضمام اور ڈیبگنگ کا تجربہ حاصل کریں گے
+
+## قدم بہ قدم نفاذ گائیڈ
+
+### مرحلہ 1: ماحول کی ترتیب اور انضمام
+
+سب سے پہلے، وہ مکمل سیمیولیشن ماحول سیٹ اپ کریں جو تمام ماڈیولز کو انضمام کرے:
+
+```python
+# capstone_setup.py
+import rclpy
+from rclpy.node import Node
+from std_msgs.msg import String
+from geometry_msgs.msg import Pose, Twist
+from sensor_msgs.msg import JointState, Image, CompressedImage
+from builtin_interfaces.msg import Duration
+from trajectory_msgs.msg import JointTrajectory, JointTrajectoryPoint
+import numpy as np
+import asyncio
+import openai
+from typing import Dict, List, Tuple, Any
+
+class CapstoneEnvironment(Node):
+    """
+    تمام ماڈیولز کو انضمام کرنے والا مکمل کیپسٹون ماحول
+    """
+    def __init__(self):
+        super().__init__('capstone_environment')
+
+        # تمام ماڈیولز سے پبلشرز
+        self.joint_trajectory_pub = self.create_publisher(
+            JointTrajectory, '/joint_trajectory', 10)
+        self.cmd_vel_pub = self.create_publisher(
+            Twist, '/cmd_vel', 10)
+        self.speech_pub = self.create_publisher(
+            String, '/tts_input', 10)
+
+        # سینسر فیڈ بیک کے لیے سبسکرائبرز
+        self.joint_state_sub = self.create_subscription(
+            JointState, '/joint_states', self.joint_state_callback, 10)
+        self.imu_sub = self.create_subscription(
+            # توازن کنٹرول کے لیے IMU ڈیٹا
+            String, '/imu_data', self.imu_callback, 10)  # مثال کے لیے سادہ
+
+        # تمام ذیلی نظام شروع کریں
+        self.initialize_ros_subsystems()
+        self.initialize_dynamics_subsystems()
+        self.initialize_voice_subsystems()
+
+        # مرکزی کنٹرول لوپ کے لیے ٹائمر
+        self.control_timer = self.create_timer(0.01, self.main_control_loop)
+
+        self.get_logger().info('کیپسٹون ماحول شروع کیا گیا')
+
+    def initialize_ros_subsystems(self):
+        """
+        Module 1 سے ROS 2 ذیلی نظام شروع کریں
+        """
+        self.get_logger().info('ROS 2 ذیلی نظام شروع کیا جا رہا ہے...')
+        # نیویگیشن، ادراک، اور کنٹرول سسٹم شروع کریں
+        pass
+
+    def initialize_dynamics_subsystems(self):
+        """
+        Module 2-3 سے ڈائی نامکس ذیلی نظام شروع کریں
+        """
+        self.get_logger().info('ڈائی نامکس ذیلی نظام شروع کیا جا رہا ہے...')
+        # توازن کنٹرولر، IK حل، گریس پلانر شروع کریں
+        pass
+
+    def initialize_voice_subsystems(self):
+        """
+        Module 4 سے وائس ذیلی نظام شروع کریں
+        """
+        self.get_logger().info('وائس ذیلی نظام شروع کیا جا رہا ہے...')
+        # وِسپر پروسیسر، LLM برج، VLA میپر شروع کریں
+        pass
+
+    def joint_state_callback(self, msg: JointState):
+        """
+        جوائنٹ سٹیٹ فیڈ بیک ہینڈل کریں
+        """
+        self.current_joint_states = msg
+
+    def imu_callback(self, msg):
+        """
+        توازن کنٹرول کے لیے IMU ڈیٹا ہینڈل کریں
+        """
+        self.current_imu_data = msg
+
+    def main_control_loop(self):
+        """
+        تمام ذیلی نظام کو مربوط کرنے والا مرکزی کنٹرول لوپ
+        """
+        # یہاں سب ماڈیولز ایک ساتھ کام کرتے ہیں
+        pass
+```
+
+### مرحلہ 2: مکمل VLA لاگ نفاذ
+
+وہ مکمل وژن-زبان-ایکشن پائپ لائن نافذ کریں جو وائس حکم کو روبوٹ ایکشن سے جوڑتا ہے:
+
+```python
+# capstone_vla.py
+import json
+import asyncio
+from dataclasses import dataclass
+from enum import Enum
+from typing import Dict, List, Tuple, Any
+import numpy as np
+import openai
+import cv2
+from sensor_msgs.msg import Image
+from cv_bridge import CvBridge
+
+class TaskType(Enum):
+    """
+    کاموں کی اقسام جو روبوٹ انجام دے سکتا ہے
+    """
+    NAVIGATION = "navigation"
+    MANIPULATION = "manipulation"
+    INTERACTION = "interaction"
+    SEARCH = "search"
+
+@dataclass
+class TaskPlan:
+    """
+    مکمل کام کی منصوبہ بندی کے لیے ڈیٹا کلاس
+    """
+    task_type: TaskType
+    description: str
+    actions: List[Dict]
+    priority: int
+    success_criteria: List[str]
+
+class VLAIntegrator:
+    """
+    وژن، زبان، اور ایکشن سسٹم انضمام کرتا ہے
+    """
+    def __init__(self, whisper_api_key: str, llm_api_key: str):
+        # تمام تین سسٹم شروع کریں
+        self.whisper_processor = WhisperVoiceProcessor(api_key=whisper_api_key)
+        self.llm_bridge = LLMBridge(api_key=llm_api_key)
+        self.vision_system = VisionSystem()
+        self.action_executor = ActionExecutor()
+
+    async def process_command(self, command: str) -> bool:
+        """
+        مکمل VLA پائپ لائن: حکم -> وژن -> زبان -> ایکشن
+        """
+        self.get_logger().info(f"حکم کو عمل کریں: {command}")
+
+        # 1. LLM کا استعمال کرتے ہوئے حکم کو پارس کریں
+        actions = await self.llm_bridge.parse_command(command)
+        if not actions:
+            self.get_logger().error("حکم سے کوئی ایکشن نکالا نہیں گیا")
+            return False
+
+        # 2. اشیاء/ماحول کی شناخت کے لیے وژن سسٹم استعمال کریں
+        environment_state = await self.vision_system.get_environment_state()
+
+        # 3. ایکشن کو مخصوص ماحولی متناسق میں میپ کریں
+        executable_actions = self.map_actions_to_environment(
+            actions, environment_state)
+
+        # 4. ایکشن انجام دیں
+        success = await self.action_executor.execute_sequence(executable_actions)
+
+        return success
+
+    def map_actions_to_environment(self, actions: List, env_state: Dict) -> List:
+        """
+        خلاصہ ایکشن کو مخصوص ماحولی متناسق میں میپ کریں
+        """
+        mapped_actions = []
+
+        for action in actions:
+            if action.action_type == ActionType.MOVE_TO:
+                # ماحول میں مقام تلاش کریں
+                location = env_state.get(action.parameters.get("location", ""))
+                if location:
+                    action.parameters["coordinates"] = location["coordinates"]
+                    mapped_actions.append(action)
+            elif action.action_type == ActionType.GRASP:
+                # ماحول میں چیز تلاش کریں
+                object_name = action.parameters.get("object_name", "")
+                obj_info = env_state.get("objects", {}).get(object_name, {})
+                if obj_info:
+                    action.parameters["position"] = obj_info.get("position", [0, 0, 0])
+                    action.parameters["orientation"] = obj_info.get("orientation", [0, 0, 0, 1])
+                    mapped_actions.append(action)
+            else:
+                mapped_actions.append(action)
+
+        return mapped_actions
+
+class VisionSystem:
+    """
+    چیز کی پہچان اور ماحول کی سمجھ کے لیے وژن سسٹم
+    """
+    def __init__(self):
+        self.cv_bridge = CvBridge()
+        self.object_detector = self.initialize_object_detector()
+
+    def initialize_object_detector(self):
+        """
+        چیز کی پہچان ماڈل شروع کریں (YOLO یا اسی طرح استعمال کریں)
+        """
+        # مشق میں، ایک پیش از تربیت ماڈل لوڈ کریں
+        # اس مثال کے لیے، ہم ایک جگہ دار استعمال کریں گے
+        return None
+
+    async def get_environment_state(self) -> Dict:
+        """
+        ماحول کی موجودہ حالت حاصل کریں بشمول اشیاء اور مقامات
+        """
+        # یہ عام طور پر کیمرہ امیجز کو پروسیس کر کے اشیاء کی پہچان کرے گا
+        # اس مثال کے لیے، ایک جھوٹا ماحول کی حالت لوٹائیں
+        environment_state = {
+            "objects": {
+                "نیلی گیند": {
+                    "position": [1.2, 0.5, 0.1],
+                    "orientation": [0, 0, 0, 1],
+                    "properties": {"color": "نیلا", "shape": "گول", "size": "چھوٹا"}
+                },
+                "لال کپ": {
+                    "position": [0.8, -0.3, 0.2],
+                    "orientation": [0, 0, 0, 1],
+                    "properties": {"color": "لال", "shape": "سیلنڈر", "size": "درمیانہ"}
+                }
+            },
+            "locations": {
+                "کچن": {"coordinates": [2.0, 1.0, 0.0]},
+                "لاؤنگ روم": {"coordinates": [0.0, 0.0, 0.0]},
+                "بیڈ روم": {"coordinates": [-1.0, 1.5, 0.0]}
+            },
+            "robot_pose": {"position": [0.0, 0.0, 0.0], "orientation": [0, 0, 0, 1]}
+        }
+
+        return environment_state
+
+    def process_image(self, image_msg: Image) -> Dict:
+        """
+        کیمرہ امیج کو چیز کی پہچان کے لیے عمل کریں
+        """
+        # ROS امیج کو OpenCV فارمیٹ میں تبدیل کریں
+        cv_image = self.cv_bridge.imgmsg_to_cv2(image_msg, "bgr8")
+
+        # چیز کی پہچان چلائیں (سادہ)
+        # مشق میں، YOLO یا اسی طرح ماڈل چلائیں
+        detected_objects = self.detect_objects(cv_image)
+
+        return detected_objects
+
+    def detect_objects(self, image) -> Dict:
+        """
+        امیج میں چیز کی پہچان کریں (جگہ دار نفاذ)
+        """
+        # جگہ دار - مشق میں، ایک حقیقی چیز کی پہچان ماڈل استعمال کریں
+        return {"objects": [], "bounding_boxes": []}
+
+class ActionExecutor:
+    """
+    روبوٹ پر ایکشن انجام دیتا ہے
+    """
+    def __init__(self):
+        self.current_pose = np.array([0.0, 0.0, 0.0])
+        self.is_executing = False
+
+    async def execute_sequence(self, actions: List) -> bool:
+        """
+        ایکشن کی ترتیب انجام دیں
+        """
+        self.is_executing = True
+
+        for action in actions:
+            success = await self.execute_action(action)
+            if not success:
+                self.is_executing = False
+                return False
+
+        self.is_executing = False
+        return True
+
+    async def execute_action(self, action) -> bool:
+        """
+        ایک ایکشن انجام دیں
+        """
+        print(f"ایکشن انجام دیں: {action.action_type.value}")
+        print(f"پیرامیٹر: {action.parameters}")
+
+        # یہ ROS 2 ایکشن سرورز کے ساتھ رابطہ کرے گا
+        # اس مثال کے لیے، عمل کی شبیہہ سازی کریں
+        import time
+        time.sleep(0.5)  # عمل کے وقت کی شبیہہ سازی
+
+        return True
+```
+
+### مرحلہ 3: مکمل پائی تھون کوڈ مثال برائے اینڈ ٹو اینڈ سسٹم
+
+یہاں مکمل وائس کنٹرولڈ ہیومنوائڈ سسٹم کا مکمل نفاذ ہے:
+
+```python
+# capstone_main.py
+import rclpy
+from rclpy.node import Node
+from std_msgs.msg import String
+from geometry_msgs.msg import Pose, Twist
+from sensor_msgs.msg import JointState, Image
+from builtin_interfaces.msg import Duration
+from trajectory_msgs.msg import JointTrajectory, JointTrajectoryPoint
+import asyncio
+import threading
+import json
+from typing import Dict, List, Any
+
+class AutonomousHumanoid(Node):
+    """
+    تمام ماڈیولز کو انضمام کرنے والا مکمل خود مختار ہیومنوائڈ نفاذ
+    """
+    def __init__(self):
+        super().__init__('autonomous_humanoid')
+
+        # VLA سسٹم شروع کریں
+        self.vla_integrator = VLAIntegrator(
+            whisper_api_key="your-whisper-key",
+            llm_api_key="your-llm-key"
+        )
+
+        # پبلشرز
+        self.joint_trajectory_pub = self.create_publisher(
+            JointTrajectory, '/joint_trajectory', 10)
+        self.cmd_vel_pub = self.create_publisher(Twist, '/cmd_vel', 10)
+        self.speech_pub = self.create_publisher(String, '/tts_input', 10)
+
+        # سبسکرائبرز
+        self.voice_command_sub = self.create_subscription(
+            String, '/voice_commands', self.voice_command_callback, 10)
+        self.joint_state_sub = self.create_subscription(
+            JointState, '/joint_states', self.joint_state_callback, 10)
+        self.camera_sub = self.create_subscription(
+            Image, '/camera/image_raw', self.camera_callback, 10)
+
+        # اندرونی حالت
+        self.current_joint_states = None
+        self.current_camera_image = None
+        self.is_busy = False
+
+        # سسٹم کی نگرانی کے لیے ٹائمر
+        self.monitor_timer = self.create_timer(1.0, self.system_monitor)
+
+        self.get_logger().info('خود مختار ہیومنوائڈ سسٹم شروع کیا گیا')
+
+    def voice_command_callback(self, msg: String):
+        """
+        آنے والے وائس کمانڈ ہینڈل کریں
+        """
+        command = msg.data
+        self.get_logger().info(f'وائس کمانڈ ملا: {command}')
+
+        if not self.is_busy:
+            # کمانڈ کو الگ تھریڈ میں عمل کریں تاکہ بلاک نہ ہو
+            thread = threading.Thread(
+                target=self.process_voice_command_thread,
+                args=(command,)
+            )
+            thread.start()
+        else:
+            self.get_logger().warn('سسٹم مصروف، کمانڈ کی قطار میں')
+
+    def process_voice_command_thread(self, command: str):
+        """
+        الگ تھریڈ میں وائس کمانڈ عمل کریں
+        """
+        try:
+            self.is_busy = True
+            self.get_logger().info(f'کمانڈ عمل کریں: {command}')
+
+            # بے ترتیب VLA پروسیسنگ چلائیں
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            success = loop.run_until_complete(
+                self.vla_integrator.process_command(command)
+            )
+
+            if success:
+                self.get_logger().info('کمانڈ کامیابی سے انجام دیا گیا')
+                self.speak_response("کمانڈ کامیابی سے مکمل ہوا")
+            else:
+                self.get_logger().error('کمانڈ کا عمل ناکام ہوا')
+                self.speak_response("معذرت، میں اس کمانڈ کو مکمل نہیں کر سکا")
+
+        except Exception as e:
+            self.get_logger().error(f'کمانڈ عمل کرنے میں خامی: {str(e)}')
+            self.speak_response("معذرت، آپ کے کمانڈ کو عمل کرنے میں ایک خامی پیش آئی")
+        finally:
+            self.is_busy = False
+
+    def joint_state_callback(self, msg: JointState):
+        """
+        توازن کنٹرول کے لیے جوائنٹ سٹیٹ فیڈ بیک ہینڈل کریں
+        """
+        self.current_joint_states = msg
+
+    def camera_callback(self, msg: Image):
+        """
+        وژن سسٹم کے لیے کیمرہ امیجز ہینڈل کریں
+        """
+        self.current_camera_image = msg
+
+    def system_monitor(self):
+        """
+        سسٹم کی حیثیت اور صحت کی نگرانی کریں
+        """
+        status = {
+            "voice_system": "active",
+            "vision_system": "active" if self.current_camera_image else "inactive",
+            "control_system": "active",
+            "busy": self.is_busy,
+            "joint_states": "received" if self.current_joint_states else "missing"
+        }
+
+        self.get_logger().debug(f'سسٹم کی حیثیت: {json.dumps(status)}')
+
+    def speak_response(self, text: str):
+        """
+        بولنے کا جواب شائع کریں
+        """
+        msg = String()
+        msg.data = text
+        self.speech_pub.publish(msg)
+
+    def execute_trajectory(self, joint_positions: List[float], duration: float = 2.0):
+        """
+        جوائنٹ ٹریجکٹری انجام دیں
+        """
+        trajectory = JointTrajectory()
+        trajectory.joint_names = self.get_robot_joint_names()  # یہ میتھڈ نفاذ کریں
+
+        point = JointTrajectoryPoint()
+        point.positions = joint_positions
+        point.time_from_start = Duration(sec=int(duration), nanosec=0)
+
+        trajectory.points.append(point)
+
+        self.joint_trajectory_pub.publish(trajectory)
+
+    def get_robot_joint_names(self) -> List[str]:
+        """
+        مخصوص روبوٹ ماڈل کے جوائنٹ نام حاصل کریں
+        """
+        # یہ آپ کے روبوٹ کے URDF کے مطابق ترتیب دیا جانا چاہیے
+        return [
+            'hip_joint', 'knee_joint', 'ankle_joint',
+            'shoulder_joint', 'elbow_joint', 'wrist_joint'
+        ]  # جگہ دار نام
+
+def main(args=None):
+    """
+    کیپسٹون پروجیکٹ کا مرکزی اندراج نکتہ
+    """
+    rclpy.init(args=args)
+    autonomous_humanoid = AutonomousHumanoid()
+
+    try:
+        rclpy.spin(autonomous_humanoid)
+    except KeyboardInterrupt:
+        autonomous_humanoid.get_logger().info('خود مختار ہیومنوائڈ بند کیا جا رہا ہے')
+    finally:
+        autonomous_humanoid.destroy_node()
+        rclpy.shutdown()
+
+if __name__ == '__main__':
+    main()
+```
+
+### میرمیڈ.جی ایس ڈائیاگرام: خود مختار ہیومنوائڈ سسٹم آرکیٹیکچر
+
+```mermaid
+graph TB
+    subgraph "صارف انٹرفیس"
+        A[وائس کمانڈ: "نیلی گیند اٹھائیں"] --> B(وِسپر API)
+    end
+
+    subgraph "AI پروسیسنگ"
+        B --> C[LLM: کمانڈ کی تشریح]
+        C --> D[VLA: متناسق میپنگ]
+    end
+
+    subgraph "ادراک سسٹم"
+        E[کیمرہ فیڈ] --> F[چیز کی پہچان]
+        F --> G[ماحول کی حالت]
+    end
+
+    subgraph "روبوٹ کنٹرول"
+        D --> H[نیویگیشن پلانر]
+        G --> H
+        H --> I[توازن کنٹرولر]
+        I --> J[IK حل]
+        J --> K[گریس پلانر]
+        K --> L[ایکشن عمل]
+    end
+
+    subgraph "ہارڈ ویئر انٹرفیس"
+        L --> M[جوائنٹ ٹریجکٹری کنٹرولر]
+        L --> N[بولنے کی ترکیب]
+    end
+
+    subgraph "فیڈ بیک لوپ"
+        O[IMU/سینسرز] --> P[سٹیٹ اسٹیمیشن]
+        P --> I
+    end
+
+    style A fill:#e1f5fe
+    style B fill:#f3e5f5
+    style C fill:#e8f5e8
+    style D fill:#fff3e0
+    style E fill:#fce4ec
+    style F fill:#f3ebee
+    style G fill:#e8eaf6
+    style H fill:#e0f2f1
+    style I fill:#fff8e1
+    style J fill:#e8f5e8
+    style K fill:#f1f8e9
+    style L fill:#e0e0e0
+    style M fill:#fafafa
+    style N fill:#f5f5f5
+    style O fill:#e0f2f1
+    style P fill:#e8f5e8
+```
+
+### Module 1-4 کے درمیان انضمام کے چیلنج اور حل
+
+تمام چار ماڈیولز کو انضمام کرتے وقت، کئی چیلنج پیدا ہوتے ہیں جن کے لیے مخصوص حل درکار ہوتے ہیں:
+
+#### چیلنج 1: ٹائم اور ہم وقت سازی
+ مختلف ذیلی نظام مختلف فریکوئنسیز پر کام کرتے ہیں اور مختلف لیسی کی ضرورت ہوتی ہے۔
+
+**حل:**
+```python
+class SynchronizationManager:
+    """
+    ذیلی نظام کے درمیان ٹائم اور ہم وقت سازی کا نظم کرتا ہے
+    """
+    def __init__(self):
+        self.timers = {}
+        self.last_updates = {}
+        self.timeouts = {
+            'voice': 5.0,  # 5 سیکنڈ وائس پروسیسنگ کے لیے
+            'vision': 1.0, # 1 سیکنڈ وژن پروسیسنگ کے لیے
+            'control': 0.1 # 100ms کنٹرول لوپ کے لیے
+        }
+
+    def check_synchronization(self) -> Dict[str, bool]:
+        """
+        چیک کریں کہ کیا تمام ذیلی نظام ہم وقت ہیں
+        """
+        current_time = self.get_current_time()
+        status = {}
+
+        for subsystem, last_update in self.last_updates.items():
+            time_diff = current_time - last_update
+            status[subsystem] = time_diff < self.timeouts.get(subsystem, 1.0)
+
+        return status
+```
+
+#### چیلنج 2: ڈیٹا فارمیٹ کی مطابقت
+ مختلف ماڈیولز مختلف کوآرڈینیٹ سسٹم اور ڈیٹا فارمیٹ استعمال کر سکتے ہیں۔
+
+**حل:**
+```python
+class DataFormatConverter:
+    """
+    ماڈیولز کے درمیان مختلف ڈیٹا فارمیٹس کو تبدیل کرتا ہے
+    """
+    @staticmethod
+    def ros_to_numpy_pose(ros_pose) -> np.ndarray:
+        """
+        ROS Pose میسج کو نامپائی ارے میں تبدیل کریں
+        """
+        return np.array([
+            ros_pose.position.x,
+            ros_pose.position.y,
+            ros_pose.position.z,
+            ros_pose.orientation.x,
+            ros_pose.orientation.y,
+            ros_pose.orientation.z,
+            ros_pose.orientation.w
+        ])
+
+    @staticmethod
+    def numpy_to_ros_pose(numpy_pose) -> Pose:
+        """
+        نامپائی ارے کو ROS Pose میسج میں تبدیل کریں
+        """
+        pose = Pose()
+        pose.position.x = float(numpy_pose[0])
+        pose.position.y = float(numpy_pose[1])
+        pose.position.z = float(numpy_pose[2])
+        pose.orientation.x = float(numpy_pose[3])
+        pose.orientation.y = float(numpy_pose[4])
+        pose.orientation.z = float(numpy_pose[5])
+        pose.orientation.w = float(numpy_pose[6])
+        return pose
+```
+
+#### چیلنج 3: خامی کا سامنا اور بحالی
+ پیچیدہ سسٹم کو مستحکم خامی کا سامنا اور بحالی کی ضرورت ہوتی ہے۔
+
+**حل:**
+```python
+class ErrorRecoveryManager:
+    """
+    ذیلی نظام کے درمیان خامی کا پتہ لگانے اور بحالی کا نظم کرتا ہے
+    """
+    def __init__(self):
+        self.error_history = []
+        self.recovery_strategies = {
+            'voice_timeout': self.recover_voice_timeout,
+            'vision_failure': self.recover_vision_failure,
+            'balance_loss': self.recover_balance_loss,
+            'grasp_failure': self.recover_grasp_failure
+        }
+
+    def handle_error(self, error_type: str, context: Dict) -> bool:
+        """
+        خامی کا سامنا کریں اور بحالی کی کوشش کریں
+        """
+        if error_type in self.recovery_strategies:
+            recovery_func = self.recovery_strategies[error_type]
+            success = recovery_func(context)
+
+            self.error_history.append({
+                'type': error_type,
+                'context': context,
+                'recovery_success': success,
+                'timestamp': self.get_current_time()
+            })
+
+            return success
+        else:
+            print(f"خامی کی قسم کے لیے کوئی بحالی کی حکمت عمل نہیں: {error_type}")
+            return False
+
+    def recover_voice_timeout(self, context: Dict) -> bool:
+        """
+        وائس پروسیسنگ ٹائم آؤٹ سے بحالی
+        """
+        print("وائس ٹائم آؤٹ بحالی کی کوشش کی جا رہی ہے...")
+        # سادہ کمانڈ تشریح کے ساتھ دوبارہ کوشش کریں
+        return True
+
+    def recover_balance_loss(self, context: Dict) -> bool:
+        """
+        توازن کے نقصان سے بحالی
+        """
+        print("توازن بحالی کی کوشش کی جا رہی ہے...")
+        # ہنگامی توازن بحالی روتین انجام دیں
+        return True
+```
+
+### مربوط سسٹم کے لیے ڈیبگنگ اور ٹیسٹنگ کی حکمت عملیاں
+
+مربوط سسٹم کی ٹیسٹنگ کے لیے ایک متعدد پرت کا نقطہ نظر درکار ہے:
+
+```python
+class IntegrationTester:
+    """
+    مربوط سسٹم کے لیے جامع ٹیسٹنگ
+    """
+    def __init__(self, system_under_test):
+        self.sut = system_under_test
+        self.test_results = []
+
+    def run_subsystem_tests(self):
+        """
+        الگ الگ ذیلی نظام کو الگ الگ ٹیسٹ کریں
+        """
+        tests = [
+            self.test_voice_processing,
+            self.test_vision_system,
+            self.test_control_system,
+            self.test_balance_control
+        ]
+
+        for test_func in tests:
+            result = test_func()
+            self.test_results.append({
+                'test': test_func.__name__,
+                'result': result,
+                'timestamp': self.get_current_time()
+            })
+
+    def test_voice_processing(self) -> bool:
+        """
+        وائس پروسیسنگ ذیلی نظام ٹیسٹ کریں
+        """
+        try:
+            # وِسپر انضمام ٹیسٹ کریں
+            test_audio = self.create_test_audio("کچن میں جائیں")
+            result = asyncio.run(self.sut.vla_integrator.whisper_processor.transcribe_audio_from_bytes(test_audio))
+            return "کچن" in result.lower()
+        except Exception as e:
+            print(f"وائس پروسیسنگ ٹیسٹ ناکام: {e}")
+            return False
+
+    def test_integration_scenarios(self):
+        """
+        انضمام کے مناظر ٹیسٹ کریں
+        """
+        scenarios = [
+            {
+                'name': 'سادہ نیویگیشن',
+                'command': 'کچن میں جائیں',
+                'expected': ['navigation', 'move_to']
+            },
+            {
+                'name': 'چیز کی گریسنگ',
+                'command': 'لال کپ اٹھائیں',
+                'expected': ['navigation', 'grasp', 'object_detection']
+            },
+            {
+                'name': 'پیچیدہ کام',
+                'command': 'لاؤنگ روم میں جائیں، جان کو تلاش کریں، اور ان کو سلام کریں',
+                'expected': ['navigation', 'object_detection', 'interaction']
+            }
+        ]
+
+        for scenario in scenarios:
+            result = self.run_integration_scenario(scenario)
+            self.test_results.append({
+                'test': f"Integration - {scenario['name']}",
+                'result': result,
+                'timestamp': self.get_current_time()
+            })
+
+    def run_integration_scenario(self, scenario: Dict) -> bool:
+        """
+        مخصوص انضمام منظر چلائیں
+        """
+        try:
+            # کمانڈ انجام دیں
+            success = asyncio.run(
+                self.sut.vla_integrator.process_command(scenario['command'])
+            )
+
+            # متوقع رویوں کا پتہ چلا کہ کیا ہوا
+            # یہ سسٹم کی حالت، لاگز، وغیرہ کی جانچ کرے گا
+            return success
+        except Exception as e:
+            print(f"انضمام منظر ناکام: {e}")
+            return False
+```
+
+### مکمل کیپسٹون پروجیکٹ کا عمل
+
+مکمل کیپسٹون پروجیکٹ چلانے کے لیے:
+
+1. **سیمیولیشن ماحول سیٹ اپ کریں** Gazebo اور آپ کے ہیومنوائڈ روبوٹ ماڈل کے ساتھ
+2. **API کلیدیں ترتیب دیں** OpenAI وِسپر اور LLM خدمات کے لیے
+3. **ROS 2 سسٹم لانچ کریں** تمام ضروری نوڈز کے ساتھ
+4. **وائس کمانڈز کے ساتھ ٹیسٹ کریں** مکمل پائپ لائن کی تصدیق کے لیے
+
+```bash
+# ٹرمنل 1: سیمیولیشن لانچ کریں
+ros2 launch your_robot_gazebo humanoid_world.launch.py
+
+# ٹرمنل 2: خود مختار ہیومنوائڈ نوڈ لانچ کریں
+ros2 run capstone_project autonomous_humanoid
+
+# ٹرمنل 3: ٹیسٹ کمانڈز بھیجیں
+ros2 topic pub /voice_commands std_msgs/String "data: 'نیلی گیند اٹھائیں'"
+```
+
+### متوقع نتائج اور کامیابی کے معیار
+
+آپ کا کیپسٹون پروجیکٹ یہ ثابت کرنا چاہیے:
+
+1. **کامیاب وائس کمانڈ پروسیسنگ**: روبوٹ قدرتی زبان کے کمانڈ کو صحیح طور پر تشریح کرتا ہے اور انجام دیتا ہے
+2. **مستحکم توازن کنٹرول**: روبوٹ حرکت اور مینیپولیشن کے دوران توازن برقرار رکھتا ہے
+3. **درست مینیپولیشن**: روبوٹ کامیابی سے اشیاء کو تھامتا ہے اور مینیپولیٹ کرتا ہے
+4. **سسٹم انضمام**: تمام ذیلی نظام بے خود کام کرتے ہیں
+5. **مستحکم خامی کا سامنا**: سسٹم خامیوں کو نرمی سے ہینڈل کرتا ہے اور مناسب طریقے سے بحال ہوتا ہے
+
+### عام مسائل کی ٹربل شوٹنگ
+
+**مسئلہ 1: وائس کمانڈز کو تسلیم نہیں کیا جاتا**
+- API کلید کی ترتیب چیک کریں
+- آڈیو ان پٹ کی معیار چیک کریں
+- وِسپر API کو الگ سے ٹیسٹ کریں
+
+**مسئلہ 2: روبوٹ کام کے دوران توازن کھوتا ہے**
+- ZMP کنٹرولر پیرامیٹر چیک کریں
+- مرکزِ کثافت کے حسابات چیک کریں
+- مناسب سینسر کیلیبریشن چیک کریں
+
+**مسئلہ 3: اشیاء کو صحیح طریقے سے پہچانا نہیں جاتا**
+- کیمرہ کیلیبریشن چیک کریں
+- لائٹنگ کی شرائط چیک کریں
+- چیز کی پہچان ماڈل کی تصدیق کریں
+
+**مسئلہ 4: ایکشنز صحیح طریقے سے انجام نہیں دیے جاتے**
+- جوائنٹ حدود اور پابندیاں چیک کریں
+- ٹریجکٹری منصوبہ بندی کی تصدیق کریں
+- ہارڈ ویئر انٹرفیس کی تصدیق کریں
+
+### خاتمہ
+
+یہ کیپسٹون پروجیکٹ کورس کے دوران سیکھے گئے تمام تصورات کو ایک مکمل خود مختار ہیومنوائڈ سسٹم میں انضمام کرتا ہے۔ آپ ایک ایسا روبوٹ تیار کر چکے ہیں جو قدرتی زبان کو سمجھ سکتا ہے، اس کے ماحول کا جائزہ لے سکتا ہے، مناسب ایکشنز منصوبہ بند کر سکتا ہے، اور انہیں توازن برقرار رکھتے ہوئے انجام دے سکتا ہے۔ یہ فزیکل AI کا نقطہ کار ہے - AI کا جسمانی نفاذ کے ساتھ انضمام۔
+
+اس پروجیکٹ میں آپ کے حاصل کردہ مہارتوں کو اعلیٰ روبوٹکس ایپلی کیشنز میں خدمات انجام دیں گی اور جسمانی شعور کے حامل واقعی خود مختار سسٹم تیار کرنے کے چیلنجوں اور مواقع کا اندازہ فراہم کریں گی۔
+
+---
+
+### کلیدی نکات
+
+1. **انضمام کی پیچیدگی**: متعدد ذیلی نظام کو جوڑنے سے نئے رویے اور چیلنج پیدا ہوتے ہیں
+2. **VLA اصول**: وژن-زبان-ایکشن انضمام قدرتی انسان-روبوٹ تعامل کو فعال کرتا ہے
+3. **سسٹم آرکیٹیکچر**: پیچیدہ سسٹم انضمام کے لیے مناسب ڈیزائن انتہائی ضروری ہے
+4. **ٹیسٹنگ کی حکمت عمل**: پیچیدہ سسٹم کے لیے متعدد پرت کا ٹیسٹنگ نقطہ نظر
+5. **جسمانی AI**: AI اور جسمانی نفاذ کا اتحاد نئی امکانات کو جنم دیتا ہے

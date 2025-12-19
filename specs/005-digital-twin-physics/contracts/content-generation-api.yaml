@@ -1,0 +1,74 @@
+# Content Generation API Contract
+
+## Purpose
+This contract defines the interface for generating educational content for the Digital Twin Physics Simulation and Humanoid Modeling module.
+
+## Endpoints
+
+### POST /generate-week-content
+Generate content for a specific week based on parameters.
+
+**Request**:
+```json
+{
+  "week_number": 6,
+  "topic": "Physics Simulation",
+  "subtopics": ["Gazebo Physics Engines", "World Properties", "Contact vs Friction"],
+  "target_language": "en",
+  "tone": "Startup Founder",
+  "include_urdu": true
+}
+```
+
+**Response**:
+```json
+{
+  "status": "success",
+  "content": "MDX formatted content",
+  "components_used": ["ActionBar"],
+  "validation_status": "passed"
+}
+```
+
+### POST /generate-urdu-translation
+Generate Urdu translation for English content.
+
+**Request**:
+```json
+{
+  "english_content": "Original English MDX content",
+  "glossary_terms": ["Rigid Body Dynamics", "Visual geometry", "Collision geometry"],
+  "preserve_code_blocks": true
+}
+```
+
+**Response**:
+```json
+{
+  "status": "success",
+  "urdu_content": "Translated Urdu MDX content",
+  "terms_translated": 3,
+  "validation_status": "passed"
+}
+```
+
+### GET /simulation-parameters/unitree-g1
+Get simulation parameters that map to real-world Unitree G1 behavior.
+
+**Response**:
+```json
+{
+  "robot_model": "Unitree G1",
+  "friction_coefficients": {
+    "foot_material": 0.8,
+    "contact_mu1": 0.7,
+    "contact_mu2": 0.6
+  },
+  "sim_to_real_mapping": {
+    "kp": 1000000,
+    "kd": 100,
+    "max_vel": 10,
+    "min_depth": 0.001
+  }
+}
+```

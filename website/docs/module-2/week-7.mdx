@@ -1,0 +1,396 @@
+---
+title: "Week 7: URDF Modeling"
+sidebar_position: 7
+---
+
+import ActionBar from '@site/src/components/ActionBar/ActionBar';
+
+# Week 7: URDF Modeling
+
+<ActionBar />
+
+## Introduction to URDF Modeling from a Startup Perspective
+
+In this week, we'll dive deep into URDF (Unified Robot Description Format) modeling, which is essential for creating accurate digital representations of physical robots. URDF serves as the bridge between the physical and digital worlds in robotics applications. As a startup founder, mastering URDF modeling allows you to create precise robot models that can be used for simulation, visualization, and control.
+
+### URDF Links and Their Properties
+
+Links are the fundamental building blocks of a robot in URDF. They represent rigid bodies with associated properties like mass, geometry, and visual/collision representations.
+
+#### Basic Link Structure
+
+A link in URDF contains visual, collision, and inertial properties:
+
+```xml
+<link name="link_name">
+  <!-- Visual representation for rendering -->
+  <visual>
+    <geometry>
+      <box size="0.1 0.1 0.1"/>
+    </geometry>
+    <material name="blue">
+      <color rgba="0 0 1 1"/>
+    </material>
+  </visual>
+
+  <!-- Collision geometry for physics simulation -->
+  <collision>
+    <geometry>
+      <box size="0.1 0.1 0.1"/>
+    </geometry>
+  </collision>
+
+  <!-- Inertial properties for physics simulation -->
+  <inertial>
+    <mass value="1.0"/>
+    <inertia ixx="0.01" ixy="0.0" ixz="0.0" iyy="0.01" iyz="0.0" izz="0.01"/>
+  </inertial>
+</link>
+```
+
+#### Visual vs Collision Geometry
+
+It's important to distinguish between visual and collision geometries:
+
+- **Visual geometry**: Used for rendering and visualization in RViz and Gazebo
+- **Collision geometry**: Used for physics simulation and collision detection
+
+The collision geometry is often simplified compared to visual geometry for performance reasons:
+
+```xml
+<!-- Complex visual geometry -->
+<visual>
+  <geometry>
+    <mesh filename="meshes/complex_shape.dae"/>
+  </geometry>
+</visual>
+
+<!-- Simplified collision geometry -->
+<collision>
+  <geometry>
+    <box size="0.2 0.2 0.2"/>
+  </geometry>
+</collision>
+```
+
+### Joint Types: Revolute and Fixed
+
+Joints define the kinematic and dynamic relationships between links. The two most important joint types for humanoid robots are revolute and fixed joints.
+
+#### Revolute Joints
+
+Revolute joints allow rotation around a single axis, making them ideal for motorized joints:
+
+```xml
+<joint name="joint_name" type="revolute">
+  <parent link="parent_link"/>
+  <child link="child_link"/>
+  <origin xyz="0 0 0.1" rpy="0 0 0"/>
+  <axis xyz="0 0 1"/>
+  <limit lower="-1.57" upper="1.57" effort="100" velocity="3"/>
+</joint>
+```
+
+Key parameters for revolute joints:
+- `lower` and `upper`: Joint position limits in radians
+- `effort`: Maximum torque the joint can apply (N-m)
+- `velocity`: Maximum joint velocity (rad/s)
+
+#### Fixed Joints
+
+Fixed joints create a rigid connection between links with no degrees of freedom:
+
+```xml
+<joint name="fixed_joint" type="fixed">
+  <parent link="base_link"/>
+  <child link="sensor_mount"/>
+  <origin xyz="0.1 0 0.2" rpy="0 0 0"/>
+</joint>
+```
+
+Fixed joints are commonly used for attaching sensors, cameras, or other non-moving components to a robot.
+
+### Inertial Tags and Their Importance
+
+Inertial tags define the mass properties of links, which are critical for accurate physics simulation and control:
+
+```xml
+<inertial>
+  <origin xyz="0 0 0" rpy="0 0 0"/>
+  <mass value="1.0"/>
+  <inertia ixx="0.01" ixy="0.0" ixz="0.0" iyy="0.01" iyz="0.0" izz="0.01"/>
+</inertial>
+```
+
+#### Mass Properties
+
+- `mass`: The mass of the link in kilograms
+- `origin`: The center of mass offset from the link's origin
+- The inertia matrix: Describes how mass is distributed throughout the link
+
+#### Calculating Inertial Properties
+
+For common shapes, you can use standard formulas:
+
+- Box: `ixx = 1/12 * m * (h² + d²)`
+- Cylinder: `ixx = 1/12 * m * (3*r² + h²)`
+- Sphere: `ixx = 2/5 * m * r²`
+
+### Complete XML Snippet for a 2-DOF Humanoid Leg
+
+Here's a complete example of a simplified 2-DOF humanoid leg:
+
+```xml
+<?xml version="1.0"?>
+<robot name="two_dof_leg" xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <!-- Base/hip link -->
+  <link name="hip_link">
+    <visual>
+      <geometry>
+        <box size="0.1 0.1 0.1"/>
+      </geometry>
+      <material name="gray">
+        <color rgba="0.5 0.5 0.5 1"/>
+      </material>
+    </visual>
+    <collision>
+      <geometry>
+        <box size="0.1 0.1 0.1"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <mass value="2.0"/>
+      <origin xyz="0 0 0"/>
+      <inertia ixx="0.01" ixy="0.0" ixz="0.0" iyy="0.01" iyz="0.0" izz="0.01"/>
+    </inertial>
+  </link>
+
+  <!-- Hip joint (first DOF) -->
+  <joint name="hip_joint" type="revolute">
+    <parent link="hip_link"/>
+    <child link="thigh_link"/>
+    <origin xyz="0 0 -0.1" rpy="0 0 0"/>
+    <axis xyz="0 1 0"/>  <!-- Rotation around Y-axis -->
+    <limit lower="-1.57" upper="1.57" effort="100" velocity="2"/>
+  </joint>
+
+  <!-- Thigh link -->
+  <link name="thigh_link">
+    <visual>
+      <geometry>
+        <cylinder length="0.4" radius="0.05"/>
+      </geometry>
+      <material name="blue">
+        <color rgba="0 0 1 1"/>
+      </material>
+    </visual>
+    <collision>
+      <geometry>
+        <cylinder length="0.4" radius="0.05"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <mass value="3.0"/>
+      <origin xyz="0 0 -0.2"/>
+      <inertia ixx="0.05" ixy="0.0" ixz="0.0" iyy="0.05" iyz="0.0" izz="0.001"/>
+    </inertial>
+  </link>
+
+  <!-- Knee joint (second DOF) -->
+  <joint name="knee_joint" type="revolute">
+    <parent link="thigh_link"/>
+    <child link="shank_link"/>
+    <origin xyz="0 0 -0.4" rpy="0 0 0"/>
+    <axis xyz="0 1 0"/>  <!-- Rotation around Y-axis -->
+    <limit lower="0" upper="2.35" effort="100" velocity="2"/>
+  </joint>
+
+  <!-- Shank (lower leg) link -->
+  <link name="shank_link">
+    <visual>
+      <geometry>
+        <cylinder length="0.4" radius="0.05"/>
+      </geometry>
+      <material name="red">
+        <color rgba="1 0 0 1"/>
+      </material>
+    </visual>
+    <collision>
+      <geometry>
+        <cylinder length="0.4" radius="0.05"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <mass value="2.5"/>
+      <origin xyz="0 0 -0.2"/>
+      <inertia ixx="0.04" ixy="0.0" ixz="0.0" iyy="0.04" iyz="0.0" izz="0.001"/>
+    </inertial>
+  </link>
+
+  <!-- Foot link (fixed to shank) -->
+  <joint name="foot_joint" type="fixed">
+    <parent link="shank_link"/>
+    <child link="foot_link"/>
+    <origin xyz="0 0 -0.4" rpy="0 0 0"/>
+  </joint>
+
+  <link name="foot_link">
+    <visual>
+      <geometry>
+        <box size="0.15 0.1 0.02"/>
+      </geometry>
+      <material name="black">
+        <color rgba="0 0 0 1"/>
+      </material>
+    </visual>
+    <collision>
+      <geometry>
+        <box size="0.15 0.1 0.02"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <mass value="1.0"/>
+      <origin xyz="0 0 0"/>
+      <inertia ixx="0.001" ixy="0.0" ixz="0.0" iyy="0.002" iyz="0.0" izz="0.002"/>
+    </inertial>
+  </link>
+
+</robot>
+```
+
+### Robot State Publisher and Joint State Publisher Interaction
+
+The Robot State Publisher and Joint State Publisher work together to visualize robots in RViz and Gazebo by providing coordinate transforms.
+
+#### Joint State Publisher
+
+The Joint State Publisher subscribes to joint_states topic and publishes individual joint positions:
+
+```xml
+<node name="joint_state_publisher" pkg="joint_state_publisher" type="joint_state_publisher">
+  <param name="use_gui" value="true"/>
+</node>
+```
+
+#### Robot State Publisher
+
+The Robot State Publisher subscribes to joint_states and computes forward kinematics to publish tf transforms:
+
+```xml
+<node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher">
+  <param name="publish_frequency" value="50.0"/>
+</node>
+```
+
+The tf tree allows RViz/Gazebo to properly visualize the robot's pose in 3D space by computing the transformation between different coordinate frames.
+
+### URDF vs SDF Comparison for Humanoid Bipedalism
+
+URDF (Unified Robot Description Format) and SDF (Simulation Description Format) are both used for robot modeling, but they serve different purposes in the robotics ecosystem.
+
+#### URDF (Unified Robot Description Format)
+
+- **Primary use**: Robot description and kinematic modeling
+- **Strengths**:
+  - Excellent for ROS integration
+  - Focus on kinematic structure
+  - Used by Robot State Publisher and MoveIt!
+  - Simpler for basic robot descriptions
+- **Limitations**:
+  - Limited physics simulation features
+  - No native sensor simulation support
+  - Less detailed material properties
+
+#### SDF (Simulation Description Format)
+
+- **Primary use**: Simulation-specific robot and environment description
+- **Strengths**:
+  - Rich physics simulation support
+  - Advanced sensor modeling
+  - Detailed material properties and rendering
+  - Better integration with Gazebo
+  - Supports complex environments and worlds
+- **Limitations**:
+  - More complex than URDF
+  - Less ROS-native (requires additional packages)
+  - Steeper learning curve
+
+#### When to Use Each for Humanoid Robotics
+
+For humanoid bipedalism applications:
+- **Use URDF** when:
+  - Creating robot models for ROS ecosystem
+  - Developing kinematic controllers
+  - Working with MoveIt! for motion planning
+  - Need simple, clean robot descriptions
+
+- **Use SDF** when:
+  - Setting up complex physics simulations
+  - Working with advanced sensors and realistic rendering
+  - Creating simulation environments
+  - Need detailed physics properties
+
+For optimal humanoid robotics development, you often use both: URDF for the ROS-based robot description and convert to SDF for Gazebo simulation.
+
+### Enhanced URDF vs SDF Comparison for Humanoid Bipedalism
+
+When developing humanoid bipedal robots, the choice between URDF and SDF becomes even more critical due to the complex dynamics involved in walking and balance control.
+
+#### Performance Considerations for Bipedal Robots
+
+Humanoid robots require precise simulation of:
+- Balance control algorithms
+- Foot-ground contact dynamics
+- Complex multi-link kinematic chains
+- Real-time control loop timing
+
+**URDF advantages for bipedalism**:
+- Better integration with ROS controllers
+- Simpler for kinematic modeling of leg structures
+- Efficient for motion planning algorithms
+- Standardized approach across ROS ecosystem
+
+**SDF advantages for bipedalism**:
+- More accurate contact simulation for foot-ground interactions
+- Better physics for balance control validation
+- Detailed sensor simulation for IMU and force/torque sensors
+- Advanced material properties for different walking surfaces
+
+#### Functionality Differences for Humanoid Robots
+
+The specific requirements of bipedal robots highlight different strengths:
+
+**URDF functionality**:
+- Excellent for inverse kinematics calculations
+- Clean representation of joint hierarchies
+- Integration with MoveIt! for walking pattern generation
+- Simpler debugging of kinematic chains
+
+**SDF functionality**:
+- Superior contact stability for walking simulations
+- Better force control simulation
+- Advanced friction models for different terrains
+- More realistic sensor noise modeling
+
+#### Tooling and Ecosystem Considerations
+
+For humanoid robotics specifically, consider these tooling aspects:
+
+**Development workflow**:
+- Design robot in URDF for ROS compatibility
+- Convert to SDF for Gazebo simulation
+- Use Xacro macros to maintain single source of truth
+- Leverage tools like `gazebo_ros_pkgs` for seamless integration
+
+**Validation approach**:
+- Test kinematic solutions in URDF-based tools
+- Validate dynamics in SDF-based simulation
+- Use both formats during development lifecycle
+- Ensure parameter consistency between formats
+
+The key insight for humanoid robotics startups is that both formats serve complementary purposes, and mastering both is essential for effective robot development and validation.
+
+### Importance of Physical AI: Digital Representation Accuracy
+
+The accuracy of URDF models directly impacts the effectiveness of Physical AI systems. Precise inertial properties and joint limits ensure that AI controllers trained in simulation can transfer effectively to real hardware, reducing the sim-to-real gap that often plagues robotics applications.

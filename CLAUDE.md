@@ -216,6 +216,9 @@ See `.specify/memory/constitution.md` for code quality, testing, performance, se
 - File-based (JSON and MDX files in .claude/agents/ and .claude/skills/ directories) (003-intelligence-subagents)
 - MDX, Python 3.8+ (for ROS 2 Humble), JavaScript/TypeScript (for Docusaurus framework) + Docusaurus 3.x, React 18.x, Node.js 18+, ROS 2 Humble, rclpy client library (004-content-module1)
 - File-based (MDX content files in docs/ and i18n/ directories) (004-content-module1)
+- N/A (file-based documentation content in MDX format) (005-digital-twin-physics)
+- Python 3.8+ (for ROS 2 Humble), JavaScript/TypeScript (for Docusaurus framework), C++ (for NVIDIA Isaac Sim/ROS) + Docusaurus 3.x, React 18.x, Node.js 18+, ROS 2 Humble, NVIDIA Isaac Sim, Isaac ROS, NITROS (NVIDIA Isaac Transport for ROS) (006-ai-robot-brain)
+- Python 3.8+ (for ROS 2 Humble), JavaScript/TypeScript (for Docusaurus framework) + Docusaurus 3.x, React 18.x, Node.js 18+, ROS 2 Humble, rclpy client library, OpenAI Whisper, LLM APIs (GPT-4/GPT-4o) (007-humanoid-dynamics-voice)
 
 ## Recent Changes
 - 001-docusaurus-infrastructure: Added TypeScript 5.x, JavaScript ES2022 + Docusaurus 3.x, React 18.x, Node.js 18+, npm/yarn

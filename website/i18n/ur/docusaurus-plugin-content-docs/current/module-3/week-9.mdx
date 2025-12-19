@@ -1,0 +1,380 @@
+---
+title: "ہفتہ 9: Isaac ROS ادراک پائپ لائنز"
+sidebar_position: 9
+---
+
+import ActionBar from '@site/src/components/ActionBar/ActionBar';
+
+# ہفتہ 9: Isaac ROS ادراک پائپ لائنز
+
+<ActionBar />
+
+## اسٹارٹ اپ کے نقطہ نظر سے Isaac ROS ادراک پائپ لائنز
+
+اس ہفتے میں، ہم Isaac ROS VSLAM (Visual Simultaneous Localization and Mapping) اور جیٹسن اورن کے لیے بہتر بنائے گئے ادراک پائپ لائنز کا جائزہ لیں گے۔ Isaac ROS، ROS 2 ایکو سسٹم کے اندر روبوٹ ادراک الگورتھم اور ٹولز کا ایک مجموعہ فراہم کرتا ہے۔ جیٹسن اورن کی طاقتور ایچ ڈبلیو کے فوائد اٹھانے کے لیے، Isaac ROS کو ادراک کام کے لیے مخصوص بہترین کارکردگی کے لیے ترتیب دیا جا سکتا ہے۔
+
+### Isaac ROS VSLAM
+
+Isaac ROS VSLAM ایک اہم قابلیت ہے جو روبوٹ کو ایک نقشہ تیار کرنے اور اسی نقشہ میں اپنی جگہ کا تعین کرنے کے قابل بناتی ہے۔ Isaac ROS کئی VSLAM الگورتھمز فراہم کرتا ہے جو NVIDIA ہارڈ ویئر کے لیے بہترین ہیں۔
+
+#### ORB-SLAM Isaac ROS میں
+
+ORB-SLAM ایک مقبول ویژنل SLAM الگورتھم ہے جو Isaac ROS کے ساتھ اچھی طرح کام کرتا ہے۔ یہ اشیاء کی پہچان اور نقشہ کاری کے لیے ORB (Oriented FAST and Rotated BRIEF) خصوصیات کا استعمال کرتا ہے۔
+
+```python
+# Isaac ROS VSLAM مثال کے لیے Python API
+import rclpy
+from rclpy.node import Node
+from sensor_msgs.msg import Image, CameraInfo
+from geometry_msgs.msg import PoseStamped
+from nav_msgs.msg import Odometry
+import cv2
+import numpy as np
+
+class IsaacROSVslamNode(Node):
+    """
+    Isaac ROS VSLAM نوڈ کی مثال
+    VSLAM اور Isaac ROS ادراک پائپ لائن کو یکجہتی کرنے کا طریقہ ظاہر کرتا ہے
+    """
+
+    def __init__(self):
+        super().__init__('isaac_ros_vslam_node')
+
+        # کیمرہ کے تصویر کی سبسکرپشن
+        self.image_sub = self.create_subscription(
+            Image,
+            '/camera/rgb/image_rect_color',
+            self.image_callback,
+            10
+        )
+
+        # کیمرہ کی معلومات کی سبسکرپشن
+        self.info_sub = self.create_subscription(
+            CameraInfo,
+            '/camera/rgb/camera_info',
+            self.camera_info_callback,
+            10
+        )
+
+        # مقام کی اشاعت
+        self.odom_pub = self.create_publisher(
+            Odometry,
+            '/visual_slam/odometry',
+            10
+        )
+
+        # ORB-SLAM کمپوننٹس کو شروع کریں
+        self.orb_slam = None
+        self.camera_matrix = None
+        self.distortion_coeffs = None
+
+        self.get_logger().info("Isaac ROS VSLAM نوڈ شروع ہو گیا")
+        self.get_logger().info("جسمانی AI کی اہمیت: یہ ظاہر کرتا ہے کہ AI ادراک نظام جسمانی روبوٹ سینسر سے کیسے منسلک ہوتے ہیں")
+
+    def image_callback(self, msg):
+        """VSLAM کے لیے آنے والی کیمرہ کی تصاویر کو عمل کریں"""
+        # ROS تصویر کو OpenCV فارمیٹ میں تبدیل کریں
+        img = self.ros_image_to_cv2(msg)
+
+        # ORB-SLAM کے ساتھ تصویر کو عمل کریں اگر شروع کیا گیا ہو
+        if self.orb_slam is not None and self.camera_matrix is not None:
+            pose = self.orb_slam.process_image(img, self.camera_matrix)
+
+            # تخمینہ شدہ مقام کو اشاعت کریں
+            if pose is not None:
+                odom_msg = Odometry()
+                odom_msg.header.stamp = self.get_clock().now().to_msg()
+                odom_msg.header.frame_id = "map"
+                # پوز ڈیٹا فراہم کریں
+                self.odom_pub.publish(odom_msg)
+
+                self.get_logger().debug(f"VSLAM مقام کا تخمینہ شائع کیا گیا")
+
+    def camera_info_callback(self, msg):
+        """کیمرہ کی کیلیبریشن کے پیرامیٹر کو عمل کریں"""
+        self.camera_matrix = np.array(msg.k).reshape(3, 3)
+        self.distortion_coeffs = np.array(msg.d)
+
+        if self.orb_slam is None:
+            # ORB-SLAM کو کیمرہ کے پیرامیٹر کے ساتھ شروع کریں
+            self.initialize_orb_slam()
+
+    def ros_image_to_cv2(self, img_msg):
+        """ROS تصویر کا پیغام OpenCV تصویر میں تبدیل کریں"""
+        # ROS تصویر کو CV2 فارمیٹ میں تبدیل کرنے کا طریقہ
+        import struct
+        if img_msg.encoding == 'rgb8':
+            img = np.frombuffer(img_msg.data, dtype=np.uint8).reshape(img_msg.height, img_msg.width, -1)
+            return cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
+        elif img_msg.encoding == 'bgr8':
+            return np.frombuffer(img_msg.data, dtype=np.uint8).reshape(img_msg.height, img_msg.width, -1)
+        else:
+            # دیگر انکوڈنگز کو ہینڈل کریں
+            raise ValueError(f"غیر تعاون یافتہ انکوڈنگ: {img_msg.encoding}")
+
+    def initialize_orb_slam(self):
+        """ORB-SLAM کو کیمرہ کے پیرامیٹر کے ساتھ شروع کریں"""
+        # ORB-SLAM کو شروع کرنے کے لیے نمونہ
+        self.get_logger().info("ORB-SLAM کو کیمرہ کے پیرامیٹر کے ساتھ شروع کیا گیا")
+```
+
+### جیٹسن اورن کے لیے ادراک پائپ لائنز کی بہترین کارکردگی
+
+جیٹسن اورن پلیٹ فارم ایچ ڈبلیو کی ایک بہت طاقتور صلاحیت فراہم کرتا ہے جو ایچ ایچ ای اے ایپلی کیشنز کے لیے اہم ہے۔ Isaac ROS اس بات کو یقینی بنانے کے لیے مخصوص بہترین کارکردگی فراہم کرتا ہے کہ ادراک کے کام جیٹسن کے ایچ ڈبلیو کو استعمال کر سکیں۔
+
+#### NITROS (NVIDIA Isaac ٹرانسپورٹ برائے ROS)
+
+NITROS ROS نوڈس کے درمیان ڈیٹا ٹرانسپورٹ کو بہتر بناتا ہے جو NVIDIA کی ہارڈ ویئر ایچلیٹیشن کو استعمال کرتا ہے۔ یہ ادراک کے پائپ لائنز کے لیے لیٹنسی کو کم کرتا ہے اور تھروپٹ کو بہتر بناتا ہے۔
+
+```python
+# Isaac ROS NITROS مثال
+import rclpy
+from rclpy.node import Node
+from isaac_ros_nitros.types import NitrosType
+from sensor_msgs.msg import Image
+from cv_bridge import CvBridge
+
+class NitrosAdraakNode(Node):
+    """
+    NITROS کے لیے بہتر بنائے گئے ادراک نوڈ
+    جیٹسن اورن کے لیے بہترین کارکردگی کے لیے ٹرانسپورٹ کو بہتر بناتا ہے
+    """
+
+    def __init__(self):
+        super().__init__('nitros_adraak_node')
+
+        # NITROS کے لیے مختصر سبسکرپشن
+        self.nitros_sub = self.create_subscription(
+            NitrosType.Image,
+            'nitros_input_image',
+            self.nitros_image_callback,
+            10
+        )
+
+        # بہتر بنائے گئے پبلشر
+        self.nitros_pub = self.create_publisher(
+            NitrosType.Image,
+            'nitros_output_image',
+            10
+        )
+
+        self.cv_bridge = CvBridge()
+        self.get_logger().info("NITROS ادراک نوڈ کو جیٹسن اورن کی بہترین کارکردگی کے ساتھ شروع کیا گیا")
+        self.get_logger().info("جسمانی AI کی اہمیت: یہ ظاہر کرتا ہے کہ AI ادراک نظام کو کیسے مخصوص ہارڈ ویئر کے لیے بہتر بنایا جاتا ہے")
+
+    def nitros_image_callback(self, msg):
+        """NITROS-optimized ٹرانسپورٹ کے ساتھ تصویر کو عمل کریں"""
+        # CUDA ٹینسر میں تصویر کو تبدیل کریں (زیرو کاپی)
+        cv_image = self.cv_bridge.imgmsg_to_cv2(msg, desired_encoding='bgr8')
+
+        # جیٹسن کی تیزی کے لیے بہتر بنائے گئے ادراک کو لاگو کریں
+        processed_image = self.apply_jetson_optimized_processing(cv_image)
+
+        # NITROS کے ساتھ اشاعت کریں
+        output_msg = self.cv_bridge.cv2_to_imgmsg(processed_image, encoding='bgr8')
+        self.nitros_pub.publish(output_msg)
+
+    def apply_jetson_optimized_processing(self, image):
+        """جیٹسن اورن کے لیے بہتر بنائی گئی ادراک کو لاگو کریں"""
+        # جیٹسن-optimized پروسیسنگ کا نمونہ
+        # حقیقی نافذ کاری میں، یہ TensorRT، CUDA، یا دیگر GPU کے لیے استعمال کرے گا
+        return image  # عمل کردہ تصویر کو واپس کریں
+
+
+def main(args=None):
+    rclpy.init(args=args)
+
+    nitros_node = NitrosAdraakNode()
+
+    try:
+        rclpy.spin(nitros_node)
+    except KeyboardInterrupt:
+        print("NITROS ادراک نوڈ کو صارف نے روک دیا")
+    finally:
+        nitros_node.destroy_node()
+        rclpy.shutdown()
+
+
+if __name__ == '__main__':
+    main()
+```
+
+### جیٹسن اورن کی بہترین کارکردگی کی تکنیکیں
+
+جیٹسن اورن پلیٹ فارم کئی اہم خصوصیات فراہم کرتا ہے جن کا استعمال ادراک کے کاموں کو بہتر بنانے کے لیے کیا جا سکتا ہے:
+
+- **GPU ایچلیٹیشن**: CUDA کورز پیش کرنے کے لیے موازی پروسیسنگ
+- **DLA (Deep Learning Accelerator)**: نیورل نیٹ ورک کی استدلال کے لیے مخصوص ہارڈ ویئر
+- **PVA (Programmable Vision Accelerator)**: کمپیوٹر وژن کے کاموں کے لیے مختص ویژن پروسیسنگ یونٹس
+- **میموری بینڈ وڈتھ**: زیادہ سے زیادہ تھروپٹ پروسیسنگ کے لیے بہترین میموری سبسٹم
+
+### Isaac Sim Python API مثالیں ادراک پائپ لائنز کی بہترین کارکردگی کے لیے
+
+```python
+# Isaac Sim Python API مثالیں ادراک پائپ لائنز کی بہترین کارکردگی کے لیے
+import omni
+from omni.isaac.core import World
+from omni.isaac.core.utils.prims import create_prim
+from omni.isaac.sensor import Camera
+from omni.replicator.core import random as rand
+import numpy as np
+import carb
+
+class IsaacSimAdraakOptimizer:
+    """
+    Isaac Sim ادراک پائپ لائنز کی بہترین کارکردگی کی تکنیکوں کو ظاہر کرتا ہے
+    """
+
+    def __init__(self):
+        self.world = World(stage_units_in_meters=1.0)
+
+        # بہترین سینسر سیٹ اپ تشکیل دیں
+        self.setup_optimized_sensors()
+
+        # رینڈرنگ کی بہتریاں تشکیل دیں
+        self.configure_rendering_optimizations()
+
+        carb.log_info("Isaac Sim ادراک آپٹمائزر شروع ہو گیا")
+
+    def setup_optimized_sensors(self):
+        """ادراک پائپ لائن کی کارکردگی کے لیے سینسرز کو تشکیل دیں"""
+
+        # سٹیریو وژن کے لیے متعدد کیمرے تخلیق کریں
+        self.left_camera = Camera(
+            prim_path="/World/StereoCamera/left",
+            frequency=30,
+            resolution=(640, 480),
+            position=np.array([0.1, 0, 0]),
+            orientation=np.array([0, 0, 0, 1])
+        )
+
+        self.right_camera = Camera(
+            prim_path="/World/StereoCamera/right",
+            frequency=30,
+            resolution=(640, 480),
+            position=np.array([-0.1, 0, 0]),
+            orientation=np.array([0, 0, 0, 1])
+        )
+
+        # گہرائی کیمرو
+        self.depth_camera = Camera(
+            prim_path="/World/DepthCamera",
+            frequency=30,
+            resolution=(640, 480),
+            position=np.array([0, 0, 1.5]),
+            orientation=np.array([0, 0, 0, 1])
+        )
+
+        carb.log_info("ادراک پائپ لائن کے لیے بہترین سینسرز تشکیل دیے گئے")
+
+    def configure_rendering_optimizations(self):
+        """Isaac Sim رینڈرنگ کو ادراک پائپ لائن کی بہترین کارکردگی کے لیے تشکیل دیں"""
+
+        # ادراک کے کام کے لیے رینڈرنگ کی ترتیبات کو بہتر بنائیں
+        settings = carb.settings.get_settings()
+
+        # رینڈرنگ کی کوالیٹی کو کارکردگی کے لیے کم کریں (چونکہ ہم صرف گہرائی/کلر ادراک کے لیے ضروری ہیں)
+        settings.set("/rtx/raytracing/enable", False)
+        settings.set("/rtx/raytracing/denoise/enable", False)
+        settings.set("/rtx/raytracing/reflections/enable", False)
+        settings.set("/rtx/raytracing/shadows/enable", False)
+
+        # ادراک ڈیٹا جنریشن کے لیے تیز رینڈرنگ موڈ استعمال کریں
+        omni.kit.commands.execute(
+            "ChangeRenderer",
+            renderer_name="HydraEarthExtDs"  # RayTracedLightMap سے تیز تر
+        )
+
+        carb.log_info("ادراک پائپ لائن کے لیے رینڈرنگ کی بہتریاں لاگو ہو گئیں")
+
+    def optimize_for_jetson_hardware(self):
+        """Isaac Sim کو جیٹسن اورن ہارڈ ویئر کے لیے تشکیل دیں"""
+
+        # جیٹسن کے لیے تبدیلی کے لیے سیمیولیشن کی ترتیبات کو ایڈجسٹ کریں
+        settings = carb.settings.get_settings()
+
+        # جیٹسن کے لیے حقیقی وقت کارکردگی کے لیے کم سیمیولیشن فریکوئنسی
+        settings.set("/physics/timeStepsPerSecond", 60)  # جیٹسن کے لیے ڈیفالٹ سے کم
+
+        # میموری کا استعمال کم کریں
+        settings.set("/persistent/omnihydra/useSceneGraphInstancing", True)
+
+        # محدود VRAM کے لیے ٹیکسچر اسٹریمنگ کو بہتر بنائیں
+        settings.set("/renderer/texturePoolSize", 1024 * 1024 * 512)  # 512MB پول
+
+        carb.log_info("Isaac Sim کو جیٹسن اورن ہارڈ ویئر کے لیے تشکیل دیا گیا")
+
+    def generate_perception_training_data(self, num_samples=1000):
+        """جیٹسن کے لیے ادراک تربیت ڈیٹا تیار کریں"""
+
+        # مضبوطی کے لیے ڈومین رینڈمائزیشن لاگو کریں
+        self.apply_domain_randomization()
+
+        for i in range(num_samples):
+            # ماحول کو رینڈمائز کریں
+            self.randomize_environment()
+
+            # سینسر ڈیٹا کو حاصل کریں
+            rgb_data = self.left_camera.get_rgb()
+            depth_data = self.depth_camera.get_depth()
+
+            # جیٹسن کے لیے بہترین شکل میں ڈیٹا محفوظ کریں
+            self.save_jetson_optimized_data(i, rgb_data, depth_data)
+
+            if i % 100 == 0:
+                carb.log_info(f"{i}/{num_samples} ادراک تربیت کے نمونے تیار ہوئے")
+
+        carb.log_info(f"{num_samples} نمونوں کے لیے ادراک تربیت ڈیٹا جنریشن مکمل ہوا")
+        carb.log_info("جسمانی AI کی اہمیت: یہ ظاہر کرتا ہے کہ AI ادراک نظام کو کیسے جسمانی ہارڈ ویئر کے لیے بہتر بنایا جاتا ہے")
+
+    def apply_domain_randomization(self):
+        """сим-ٹو-ریئل ٹرانسفر کے لیے ڈومین رینڈمائزیشن کو لاگو کریں"""
+        import omni.replicator.core as rep
+
+        with rep.new_layer():
+            # لائٹنگ کو رینڈمائز کریں
+            lights = rep.get.light()
+            with lights.randomize_position():
+                rep.random.uniform((-5, -5, 5), (5, 5, 10))
+            with lights.randomize_intensity():
+                rep.random.uniform(500, 2000)
+
+            # میٹریلز کو رینڈمائز کریں
+            materials = rep.get.material()
+            with materials.randomize_roughness():
+                rep.random.uniform(0.1, 0.9)
+            with materials.randomize_specular():
+                rep.random.uniform(0.5, 1.0)
+
+    def randomize_environment(self):
+        """ڈومین رینڈمائزیشن کے لیے ماحول کو رینڈمائز کریں"""
+        # منظر کے عناصر کو رینڈمائز کرنے کے لیے نافذ کاری
+        pass
+
+    def save_jetson_optimized_data(self, idx, rgb_data, depth_data):
+        """جیٹسن کے لیے بہترین شکل میں ادراک ڈیٹا محفوظ کریں"""
+        # موثر فارمیٹ میں ڈیٹا محفوظ کرنے کے لیے نافذ کاری
+        pass
+
+
+# مثال کا استعمال:
+# optimizer = IsaacSimAdraakOptimizer()
+# optimizer.optimize_for_jetson_hardware()
+# optimizer.generate_adraak_training_data(1000)
+```
+
+### جیٹسن اورن ہارڈ ویئر کی خصوصیات اور Isaac Sim مطابقت
+
+روبوٹکس-ہارڈ ویئر-گلسیری کے مطابق، جیٹسن اورن پلیٹ فارم Isaac ROS ادراک پائپ لائنز کے لیے استثنائی صلاحیتیں فراہم کرتا ہے:
+
+- **GPU**: 2048-core NVIDIA Ampere GPU with 64 Tensor Cores
+- **CPU**: 12-core ARM Hercules CPU
+- **میموری**: 32GB LPDDR5x (684GB/s)
+- **DLA**: ذاتی طور پر Deep Learning Accelerator for efficient inference
+- **PVA**: قابل پروگرامنگ وژن ایکسلریٹر for computer vision tasks
+
+یہ خصوصیات جیٹسن اورن کو Isaac ROS ادراک پائپ لائنز کے لیے بہترین بناتی ہیں، خاص طور پر NITROS کے ساتھ بہتر ڈیٹا ٹرانسپورٹ کے لیے۔
+
+### جسمانی AI کی اہمیت: ایچ ایچ اے ادراک سسٹم
+
+یہ ادراک پائپ لائن کی مثالیں ظاہر کرتی ہیں کہ AI نظام کو روبوٹکس پلیٹ فارمزم پر کنارہ پر ڈیپلومنٹ کے لیے کیسے بہتر بنایا جا سکتا ہے۔ NITROS اور جیٹسن اورن کے ایچلیٹر کے جیسے ہارڈ ویئر مخصوص بہتریوں کا فائدہ اٹھانے سے، ادراک کے سسٹم حقیقی وقت کی کارکردگی حاصل کر سکتے ہیں جبکہ کم پاور کی کھپت برقرار رکھتے ہیں، موبائل روبوٹکس کے لیے اہم ہے۔ Isaac Sim سیمیولیشن کا انضمام حقیقی ہارڈ ویئر کے ساتھ بہتری یقینی بناتا ہے کہ سیمیولیشن میں تربیت یافتہ AI ماڈل جسمانی سسٹم پر براہ راست ڈیپلو ہو سکتے ہیں۔

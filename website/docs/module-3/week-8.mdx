@@ -1,0 +1,376 @@
+---
+title: "Week 8: USD and Synthetic Data"
+sidebar_position: 8
+---
+
+import ActionBar from '@site/src/components/ActionBar/ActionBar';
+
+# Week 8: USD and Synthetic Data
+
+<ActionBar />
+
+## Introduction to USD and Synthetic Data from a Startup Perspective
+
+In this week, we'll explore the fundamentals of Universal Scene Description (USD) and synthetic data generation using NVIDIA Isaac Sim. USD is a powerful framework for 3D scene interchange that enables complex scene composition and asset management. Synthetic data generation is crucial for training AI systems without requiring extensive real-world data collection.
+
+### Universal Scene Description (USD)
+
+Universal Scene Description (USD) is Pixar's powerful, extensible framework for 3D scene interchange. In the context of robotics and AI, USD enables the creation of complex simulation environments that can be used for training and testing AI systems.
+
+#### USD Basics
+
+USD organizes data using a hierarchical namespace of scene description primitives called "prims". These prims can contain properties, variants, and relationships that define the scene.
+
+```python
+# Isaac Sim Python API example for USD prim creation
+import omni.usd
+from pxr import Usd, UsdGeom, Gf
+
+# Get the current USD stage
+stage = omni.usd.get_context().get_stage()
+
+# Create a new Xform prim
+xform_prim = UsdGeom.Xform.Define(stage, "/World/Robot")
+
+# Add a mesh to the Xform
+mesh_prim = UsdGeom.Mesh.Define(stage, "/World/Robot/Mesh")
+mesh_prim.CreatePointsAttr([(0, 0, 0), (1, 0, 0), (0, 1, 0)])
+```
+
+### RTX Rendering in Isaac Sim
+
+RTX rendering brings photorealistic rendering capabilities to Isaac Sim using NVIDIA's RTX technology. This enables the generation of synthetic data that closely resembles real-world imagery, making it highly valuable for training perception systems.
+
+#### RTX Rendering Setup
+
+Isaac Sim leverages NVIDIA Omniverse for RTX rendering capabilities. The rendering pipeline includes physically-based materials, lighting, and global illumination effects.
+
+```python
+# Isaac Sim Python API example for RTX rendering setup
+import omni.kit.commands
+from omni.isaac.core.utils.stage import add_reference_to_stage
+
+# Enable RTX renderer
+omni.kit.commands.execute("ChangeRenderer", renderer_name="RayTracedLightMap")
+
+# Add lighting to the scene
+from omni.isaac.core.utils.prims import create_prim
+create_prim("/World/Light", "SphereLight", position=[5.0, 5.0, 10.0], attributes={"radius": 1.0})
+```
+
+### Synthetic Data Generation
+
+Synthetic data generation is the process of creating artificial data that mimics real-world observations. In robotics, this is particularly useful for training perception systems without requiring expensive real-world data collection campaigns.
+
+#### Domain Randomization
+
+Domain randomization is a technique that helps neural networks become robust to domain shift between synthetic and real data. By varying environmental parameters (lighting, textures, colors) during training, the network learns to focus on the essential features of the task.
+
+```python
+# Isaac Sim Python API example for domain randomization
+import omni.replicator.core as rep
+
+# Define randomization ranges
+with rep.new_layer():
+    # Randomize lighting
+    lights = rep.get.light()
+    with lights.randomize_position():
+        rep.randomizer.uniform((0, 0, 5), (10, 10, 15))
+
+    # Randomize materials
+    materials = rep.get.material()
+    with materials.randomize_roughness():
+        rep.randomizer.uniform(0.1, 0.9)
+
+    # Randomize textures
+    textures = rep.get.textures()
+    with textures.randomize_diffuse_texture():
+        rep.randomizer.augmentations.randomize_textures()
+```
+
+### Domain Randomization Techniques for Sim-to-Real Transfer
+
+Domain randomization is a powerful technique that helps neural networks become robust to domain shift between synthetic and real data. In Isaac Sim, domain randomization can be implemented through the Replicator framework, which allows for procedural generation of training data with randomized parameters.
+
+#### Implementation of Domain Randomization in Isaac Sim
+
+```python
+# Isaac Sim Python API example for Domain Randomization
+import omni.replicator.core as rep
+
+with rep.new_layer():
+    # Randomize lighting conditions
+    lights = rep.get.light()
+    with lights.randomize_position():
+        rep.random.uniform((-10, -10, 5), (10, 10, 20))
+    with lights.randomize_intensity():
+        rep.random.uniform(100, 1000)
+    with lights.randomize_color():
+        rep.random.uniform((0.5, 0.5, 0.5), (1.0, 1.0, 1.0))
+
+    # Randomize material properties
+    materials = rep.get.material()
+    with materials.randomize_roughness():
+        rep.random.uniform(0.1, 0.9)
+    with materials.randomize_specular():
+        rep.random.uniform(0.5, 1.0)
+    with materials.randomize_albedo():
+        rep.random.uniform((0.2, 0.2, 0.2), (1.0, 1.0, 1.0))
+
+    # Randomize object poses
+    robots = rep.get.prim_by_path("/World/Robot")
+    with robots.randomize_position():
+        rep.random.uniform((-5, -5, 0), (5, 5, 0))
+    with robots.randomize_rotation():
+        rep.random.uniform((-180, -180, -180), (180, 180, 180))
+
+    # Randomize camera properties
+    cameras = rep.get.camera()
+    with cameras.randomize_focal_length():
+        rep.random.uniform(18, 50)
+    with cameras.randomize_focus_distance():
+        rep.random.uniform(10, 100)
+```
+
+This domain randomization approach varies environmental parameters during training, helping neural networks generalize better to real-world conditions. By randomizing lighting, textures, colors, and object positions, the resulting AI models become more robust to variations in real-world deployments.
+
+### Isaac Sim Python API Examples for Scene Composition
+
+Scene composition in Isaac Sim involves creating complex environments with multiple objects, lighting, and materials. Here are examples of how to compose scenes programmatically:
+
+```python
+# Isaac Sim Python API example for scene composition
+import omni
+from omni.isaac.core import World
+from omni.isaac.core.utils.stage import add_reference_to_stage
+from omni.isaac.core.utils.prims import create_prim, get_prim_at_path
+from omni.isaac.core.utils.semantics import add_semantics
+import carb
+
+# Initialize Isaac Sim
+world = World(stage_units_in_meters=1.0)
+
+# Create a ground plane
+create_prim("/World/GroundPlane", "Mesh", position=[0, 0, 0], orientation=[0, 0, 0, 1])
+
+# Add a robot to the scene
+# In a real scenario, this would reference a robot USD file
+add_reference_to_stage(
+    usd_path="path/to/robot.usd",
+    prim_path="/World/Robot"
+)
+
+# Create various objects in the environment
+objects = [
+    {"name": "box1", "position": [1.0, 0.0, 0.5]},
+    {"name": "sphere1", "position": [-1.0, 0.5, 0.5]},
+    {"name": "cylinder1", "position": [0.0, -1.0, 0.5]}
+]
+
+for obj in objects:
+    create_prim(
+        f"/World/{obj['name']}",
+        "Cube" if "box" in obj['name'] else "Sphere" if "sphere" in obj['name'] else "Cylinder",
+        position=obj['position']
+    )
+
+# Add semantics to objects for training data
+for obj in objects:
+    add_semantics(get_prim_at_path(f"/World/{obj['name']}"), "obstacle")
+
+# Add lighting to the scene
+create_prim(
+    "/World/Light",
+    "DistantLight",
+    position=[5.0, 5.0, 10.0],
+    attributes={"color": (1.0, 1.0, 1.0), "intensity": 3000}
+)
+
+# Reset the world to apply changes
+world.reset()
+carb.log_info("Isaac Sim scene composition completed with semantic annotations")
+```
+
+### RTX Rendering Setup in Isaac Sim
+
+RTX rendering in Isaac Sim leverages NVIDIA's RTX technology to provide photorealistic rendering capabilities. This is essential for generating synthetic data that closely resembles real-world imagery.
+
+```python
+# Isaac Sim Python API example for RTX rendering setup
+import omni.kit.commands
+from omni.isaac.core.utils.stage import add_reference_to_stage
+
+# Enable RTX renderer (select appropriate renderer)
+renderer_settings = {
+    "renderer": "RayTracedLightMap",  # Options: "RayTracedLightMap", "HydraEarthExtDs", "KitOpenGL"
+    "renderMode": "Render"  # Options: "Render", "Wireframe", "Points"
+}
+
+# Apply renderer settings
+omni.kit.commands.execute(
+    "ChangeRenderer",
+    renderer_name=renderer_settings["renderer"]
+)
+
+# Configure advanced rendering settings
+def setup_advanced_rendering():
+    """Configure advanced RTX rendering settings for Isaac Sim"""
+
+    # Enable global illumination if available
+    carb.settings.get_settings().set_bool("/rtx/globalillumination/enabled", True)
+
+    # Enable denoising for faster convergence
+    carb.settings.get_settings().set_bool("/rtx/raytracing/denoise/enable", True)
+
+    # Configure anti-aliasing
+    carb.settings.get_settings().set_int("/app/antiAliasingMode", 8)  # 8x MSAA
+
+    # Set up multi-resolution shading for performance
+    carb.settings.get_settings().set_bool("/app/multiResolutionShading/enabled", True)
+
+    carb.log_info("Advanced RTX rendering settings configured")
+
+setup_advanced_rendering()
+
+# Configure camera for photorealistic rendering
+def setup_camera_for_rtx():
+    """Set up camera parameters for RTX rendering"""
+    from omni.isaac.core.utils.prims import create_prim
+
+    # Create a camera with realistic properties
+    create_prim(
+        "/World/Camera",
+        "Camera",
+        position=[2.0, 0.0, 1.5],
+        orientation=[0.0, 0.0, 0.0, 1.0]
+    )
+
+    # Configure camera intrinsics
+    camera_prim = get_prim_at_path("/World/Camera")
+    camera_prim.GetAttribute("focalLength").Set(24.0)  # 24mm focal length
+    camera_prim.GetAttribute("horizontalAperture").Set(36.0)  # Full frame
+    camera_prim.GetAttribute("verticalAperture").Set(24.0)
+
+    carb.log_info("RTX-optimized camera setup completed")
+
+setup_camera_for_rtx()
+```
+
+### Synthetic Data Generation Pipeline
+
+A complete synthetic data generation pipeline combines USD scene composition, RTX rendering, and domain randomization to produce training data for AI systems.
+
+```python
+# Complete synthetic data generation pipeline
+import omni.replicator.core as rep
+import omni.synthetic_utils.core as synth_core
+from PIL import Image
+import numpy as np
+import os
+
+class SyntheticDataGenerator:
+    """
+    A complete synthetic data generation pipeline for Isaac Sim
+    """
+
+    def __init__(self, output_dir="./synthetic_data"):
+        self.output_dir = output_dir
+        os.makedirs(output_dir, exist_ok=True)
+
+        # Initialize replicator
+        rep.orchestrator.setup_preview()
+
+        # Set up annotators for different data types
+        self.annotators = [
+            "rgb",           # Color images
+            "distance_to_image_plane",  # Depth data
+            "instance_segmentation",    # Instance masks
+            "semantic_segmentation",    # Semantic segmentation
+            "bbox_2d_tight",            # 2D bounding boxes
+            "normal"                   # Surface normals
+        ]
+
+        carb.log_info("Synthetic data generator initialized")
+        carb.log_info("Importance of Physical AI: This demonstrates how AI systems can generate training data in simulation")
+
+    def setup_randomization_graph(self):
+        """Set up the domain randomization graph"""
+
+        with rep.new_layer():
+            # Randomize environment
+            lights = rep.get.light()
+            with lights.randomize_position():
+                rep.random.uniform((-10, -10, 5), (10, 10, 20))
+            with lights.randomize_intensity():
+                rep.random.uniform(500, 2000)
+
+            # Randomize materials
+            materials = rep.get.material()
+            with materials.randomize_roughness():
+                rep.random.uniform(0.05, 0.95)
+            with materials.randomize_metallic():
+                rep.random.uniform(0.0, 1.0)
+
+            # Randomize object poses and scales
+            objects = rep.get.prim_by_type("Mesh")
+            with objects.randomize_scale():
+                rep.random.uniform((0.5, 0.5, 0.5), (2.0, 2.0, 2.0))
+            with objects.randomize_position():
+                rep.random.uniform((-5, -5, 0), (5, 5, 0))
+
+    def generate_dataset(self, num_samples=1000):
+        """Generate a synthetic dataset"""
+
+        self.setup_randomization_graph()
+
+        # Register writers for different data types
+        writer = rep.WriterRegistry.get("BasicWriter")
+        writer.initialize(
+            output_dir=self.output_dir,
+            rgb=True,
+            depth=True,
+            semantic_segmentation=True,
+            instance_segmentation=True,
+            bbox_2d_tight=True,
+            orientation="landscape",
+            colorize_instance_segmentation=True,
+            colorize_semantic_segmentation=True
+        )
+
+        # Generate samples
+        for i in range(num_samples):
+            # Trigger randomization
+            rep.orchestrator.step()
+
+            # Write the current frame
+            writer.write()
+
+            if i % 100 == 0:
+                carb.log_info(f"Generated {i}/{num_samples} synthetic samples")
+
+        # Shutdown orchestrator
+        rep.orchestrator.stop()
+
+        carb.log_info(f"Synthetic dataset generation completed. Generated {num_samples} samples.")
+        carb.log_info("Dataset saved to:", self.output_dir)
+
+# Example usage:
+# generator = SyntheticDataGenerator("./my_synthetic_dataset")
+# generator.generate_dataset(1000)  # Generate 1000 samples
+```
+
+### Hardware Requirements and RTX 4070/4080 Considerations
+
+When using Isaac Sim with RTX rendering, hardware capabilities play a crucial role in performance. According to the Robotics-Hardware-Glossary, RTX 4070 and 4080 GPUs provide excellent capabilities for Isaac Sim:
+
+- **RTX 4070**: 12GB VRAM, suitable for medium-complexity scenes with RTX rendering
+- **RTX 4080**: 16GB VRAM, capable of handling complex scenes with multiple light sources and high-resolution rendering
+
+For optimal performance with Isaac Sim:
+- Ensure sufficient VRAM for scene complexity
+- Use appropriate rendering quality settings based on available hardware
+- Consider multi-GPU setups for large-scale synthetic data generation
+
+### Importance of Physical AI: Sim-to-Real Transfer
+
+This synthetic data generation framework demonstrates how AI systems can be trained in simulation using photorealistic rendering and domain randomization techniques, then successfully transferred to real-world applications. The ability to generate diverse, labeled training data in simulation accelerates AI development while reducing real-world data collection requirements. The domain randomization techniques ensure that AI models trained in simulation are robust to variations encountered in real-world deployments.

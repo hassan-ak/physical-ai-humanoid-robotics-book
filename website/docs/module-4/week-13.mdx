@@ -1,0 +1,693 @@
+---
+title: "Week 13: Voice-to-Action Systems with OpenAI Whisper and LLM Planning"
+sidebar_position: 13
+---
+
+import ActionBar from '@site/src/components/ActionBar/ActionBar';
+
+# Week 13: Voice-to-Action Systems with OpenAI Whisper and LLM Planning
+
+<ActionBar />
+
+## Introduction to Voice-to-Action from a Startup Perspective
+
+In this week, we'll explore the cutting-edge field of voice-to-action systems for humanoid robots. As a startup founder, understanding how to integrate natural language processing with robot control is crucial for creating intuitive human-robot interaction. Voice interfaces enable robots to understand and respond to human commands in a natural way, significantly improving usability and accessibility.
+
+### Voice-to-Action Pipeline: From Speech to Robot Actions
+
+The voice-to-action system consists of several components working together to convert human speech into robot actions. This pipeline typically includes:
+
+1. **Speech Recognition**: Converting audio to text
+2. **Natural Language Understanding**: Parsing and interpreting the text
+3. **Action Mapping**: Translating commands to robot actions
+4. **Execution**: Carrying out the actions through robot control systems
+
+### OpenAI Whisper API Integration
+
+OpenAI Whisper is a state-of-the-art speech recognition system that can accurately transcribe speech to text. Here's how to integrate it with your humanoid robot:
+
+```python
+import openai
+import asyncio
+import numpy as np
+from typing import Dict, List, Tuple, Optional
+import requests
+import io
+from pydub import AudioSegment
+
+class WhisperVoiceProcessor:
+    """
+    Voice processor using OpenAI Whisper API
+    """
+    def __init__(self, api_key: str, model: str = "whisper-1"):
+        """
+        Initialize Whisper voice processor
+        :param api_key: OpenAI API key
+        :param model: Whisper model to use
+        """
+        openai.api_key = api_key
+        self.model = model
+        self.transcription_history = []
+
+    async def transcribe_audio(self, audio_file_path: str) -> str:
+        """
+        Transcribe audio file using Whisper API
+        :param audio_file_path: Path to audio file
+        :return: Transcribed text
+        """
+        with open(audio_file_path, "rb") as audio_file:
+            response = openai.Audio.transcribe(
+                model=self.model,
+                file=audio_file,
+                response_format="text"
+            )
+
+        transcription = response.strip()
+        self.transcription_history.append(transcription)
+
+        return transcription
+
+    async def transcribe_audio_from_bytes(self, audio_bytes: bytes, file_format: str = "mp3") -> str:
+        """
+        Transcribe audio from bytes using Whisper API
+        :param audio_bytes: Audio data in bytes
+        :param file_format: Audio file format (mp3, wav, etc.)
+        :return: Transcribed text
+        """
+        # Create a temporary file-like object
+        audio_io = io.BytesIO(audio_bytes)
+        audio_io.name = f"temp_audio.{file_format}"
+
+        response = openai.Audio.transcribe(
+            model=self.model,
+            file=audio_io,
+            response_format="text"
+        )
+
+        transcription = response.strip()
+        self.transcription_history.append(transcription)
+
+        return transcription
+
+    def process_real_time_audio(self, audio_stream) -> str:
+        """
+        Process real-time audio stream (simplified implementation)
+        In practice, you'd buffer the audio and send chunks to Whisper
+        """
+        # This is a simplified example - real-time processing would require
+        # more sophisticated buffering and streaming logic
+        pass
+
+# Example usage
+async def example_usage():
+    # Initialize the voice processor
+    whisper_processor = WhisperVoiceProcessor(api_key="your-openai-api-key")
+
+    # Transcribe an audio file
+    transcription = await whisper_processor.transcribe_audio("path/to/audio.wav")
+    print(f"Transcribed: {transcription}")
+```
+
+### Python Snippet: LLM-to-ROS 2 Mapping Logic
+
+Here's a complete implementation of the LLM-based cognitive planning system that maps natural language commands to ROS 2 actions:
+
+```python
+import openai
+import json
+import asyncio
+from typing import Dict, List, Tuple, Any
+from dataclasses import dataclass
+from enum import Enum
+import numpy as np
+
+class ActionType(Enum):
+    """
+    Enum for different types of robot actions
+    """
+    MOVE_TO = "move_to"
+    GRASP = "grasp"
+    PLACE = "place"
+    FOLLOW = "follow"
+    SPEAK = "speak"
+    SEARCH = "search"
+    GREET = "greet"
+
+@dataclass
+class RobotAction:
+    """
+    Data class representing a robot action
+    """
+    action_type: ActionType
+    parameters: Dict[str, Any]
+    priority: int = 1  # Higher priority actions are executed first
+
+class LLMBridge:
+    """
+    Bridge between LLMs and ROS 2 robot actions
+    """
+    def __init__(self, api_key: str, model: str = "gpt-4o"):
+        """
+        Initialize LLM bridge
+        :param api_key: OpenAI API key
+        :param model: GPT model to use
+        """
+        openai.api_key = api_key
+        self.model = model
+        self.action_history = []
+
+    async def parse_command(self, command: str) -> List[RobotAction]:
+        """
+        Parse natural language command and return robot actions
+        :param command: Natural language command
+        :return: List of RobotAction objects
+        """
+        # Define the system prompt for the LLM
+        system_prompt = """
+        You are a robot command interpreter. Your task is to convert natural language commands into structured robot actions.
+
+        Available action types:
+        - move_to: Move to a location with parameters (x, y, z coordinates)
+        - grasp: Grasp an object with parameters (object_name, position)
+        - place: Place an object at a location
+        - follow: Follow a person or object
+        - speak: Speak a message
+        - search: Search for an object in the environment
+        - greet: Greet a person
+
+        Response format: Return a JSON object with a 'actions' field containing an array of action objects.
+        Each action object should have 'action_type' and 'parameters' fields.
+
+        Example:
+        Input: "Please move to the kitchen and pick up the red cup"
+        Output: {
+            "actions": [
+                {
+                    "action_type": "move_to",
+                    "parameters": {"x": 1.0, "y": 2.0, "z": 0.0}
+                },
+                {
+                    "action_type": "grasp",
+                    "parameters": {"object_name": "red cup", "position": [1.0, 2.0, 0.8]}
+                }
+            ]
+        }
+        """
+
+        user_prompt = f"Command: {command}"
+
+        response = await openai.ChatCompletion.acreate(
+            model=self.model,
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt}
+            ],
+            temperature=0.1,
+            max_tokens=500
+        )
+
+        # Extract the JSON response
+        response_text = response.choices[0].message.content.strip()
+
+        # Clean up the response if it contains markdown formatting
+        if response_text.startswith("```json"):
+            response_text = response_text[7:]  # Remove ```json
+        if response_text.endswith("```"):
+            response_text = response_text[:-3]  # Remove ```
+
+        try:
+            parsed_response = json.loads(response_text)
+            actions_data = parsed_response.get("actions", [])
+
+            # Convert to RobotAction objects
+            robot_actions = []
+            for action_data in actions_data:
+                action_type = ActionType(action_data["action_type"])
+                parameters = action_data.get("parameters", {})
+                priority = action_data.get("priority", 1)
+
+                robot_action = RobotAction(
+                    action_type=action_type,
+                    parameters=parameters,
+                    priority=priority
+                )
+                robot_actions.append(robot_action)
+
+            # Add to history
+            self.action_history.append({
+                "command": command,
+                "actions": robot_actions
+            })
+
+            return robot_actions
+
+        except json.JSONDecodeError as e:
+            print(f"Error parsing LLM response: {e}")
+            print(f"Response text: {response_text}")
+            return []
+
+    async def execute_command_sequence(self, command: str) -> bool:
+        """
+        Parse and execute a command sequence
+        :param command: Natural language command
+        :return: True if successful, False otherwise
+        """
+        actions = await self.parse_command(command)
+
+        if not actions:
+            print(f"No actions extracted from command: {command}")
+            return False
+
+        # Execute each action in sequence
+        for action in actions:
+            success = await self.execute_action(action)
+            if not success:
+                print(f"Failed to execute action: {action}")
+                return False
+
+        return True
+
+    async def execute_action(self, action: RobotAction) -> bool:
+        """
+        Execute a single robot action (placeholder implementation)
+        In a real system, this would interface with ROS 2
+        :param action: RobotAction to execute
+        :return: True if successful, False otherwise
+        """
+        print(f"Executing action: {action.action_type.value}")
+        print(f"Parameters: {action.parameters}")
+
+        # In a real implementation, this would call ROS 2 services/clients
+        # For now, we'll simulate the execution
+        if action.action_type == ActionType.MOVE_TO:
+            return await self._execute_move_to(action.parameters)
+        elif action.action_type == ActionType.GRASP:
+            return await self._execute_grasp(action.parameters)
+        elif action.action_type == ActionType.PLACE:
+            return await self._execute_place(action.parameters)
+        elif action.action_type == ActionType.FOLLOW:
+            return await self._execute_follow(action.parameters)
+        elif action.action_type == ActionType.SPEAK:
+            return await self._execute_speak(action.parameters)
+        elif action.action_type == ActionType.SEARCH:
+            return await self._execute_search(action.parameters)
+        elif action.action_type == ActionType.GREET:
+            return await self._execute_greet(action.parameters)
+        else:
+            print(f"Unknown action type: {action.action_type}")
+            return False
+
+    # Placeholder implementations for each action type
+    async def _execute_move_to(self, params: Dict) -> bool:
+        """Execute move-to action"""
+        x = params.get("x", 0.0)
+        y = params.get("y", 0.0)
+        z = params.get("z", 0.0)
+        print(f"Moving to coordinates: ({x}, {y}, {z})")
+        # In real implementation, call ROS 2 navigation service
+        return True
+
+    async def _execute_grasp(self, params: Dict) -> bool:
+        """Execute grasp action"""
+        object_name = params.get("object_name", "unknown object")
+        position = params.get("position", [0.0, 0.0, 0.0])
+        print(f"Grasping {object_name} at position {position}")
+        # In real implementation, call ROS 2 manipulation service
+        return True
+
+    async def _execute_place(self, params: Dict) -> bool:
+        """Execute place action"""
+        position = params.get("position", [0.0, 0.0, 0.0])
+        print(f"Placing object at position {position}")
+        # In real implementation, call ROS 2 manipulation service
+        return True
+
+    async def _execute_follow(self, params: Dict) -> bool:
+        """Execute follow action"""
+        target = params.get("target", "person")
+        print(f"Following {target}")
+        # In real implementation, call ROS 2 tracking service
+        return True
+
+    async def _execute_speak(self, params: Dict) -> bool:
+        """Execute speak action"""
+        message = params.get("message", "Hello")
+        print(f"Speaking: {message}")
+        # In real implementation, call text-to-speech service
+        return True
+
+    async def _execute_search(self, params: Dict) -> bool:
+        """Execute search action"""
+        object_name = params.get("object_name", "unknown object")
+        print(f"Searching for {object_name}")
+        # In real implementation, call ROS 2 object detection service
+        return True
+
+    async def _execute_greet(self, params: Dict) -> bool:
+        """Execute greet action"""
+        person = params.get("person", "unknown person")
+        print(f"Greeting {person}")
+        # In real implementation, combine detection and speaking
+        return True
+
+# Example usage
+async def example_usage():
+    llm_bridge = LLMBridge(api_key="your-openai-api-key")
+
+    # Example commands
+    commands = [
+        "Please move to the kitchen and pick up the red cup",
+        "Go to the living room and greet John",
+        "Search for the blue ball and bring it to me"
+    ]
+
+    for command in commands:
+        print(f"\nProcessing command: {command}")
+        success = await llm_bridge.execute_command_sequence(command)
+        print(f"Command execution {'succeeded' if success else 'failed'}")
+```
+
+### VLA Logic: Prompt Engineering to Translate "Pick up the blue ball" into ROS 2 Coordinates
+
+Vision-Language-Action (VLA) systems require sophisticated prompt engineering to effectively translate natural language commands into specific robot actions. Here's how to map "Pick up the blue ball" to ROS 2 coordinates:
+
+```python
+class VLAPromptEngineer:
+    """
+    Vision-Language-Action prompt engineering system
+    """
+    def __init__(self):
+        self.object_recognition_system = ObjectRecognitionSystem()
+        self.kinematics_calculator = KinematicsCalculator()
+
+    def create_vla_prompt(self, command: str, robot_state: Dict, environment_state: Dict) -> str:
+        """
+        Create a VLA prompt that guides the LLM to generate specific actions
+        :param command: Natural language command (e.g., "Pick up the blue ball")
+        :param robot_state: Current robot state (position, joint angles, etc.)
+        :param environment_state: Current environment state (object positions, etc.)
+        :return: Structured prompt for the LLM
+        """
+        prompt = f"""
+        You are a Vision-Language-Action (VLA) coordinator for a humanoid robot. Your task is to interpret natural language commands and generate specific, executable actions.
+
+        Current robot state:
+        {json.dumps(robot_state, indent=2)}
+
+        Current environment state:
+        {json.dumps(environment_state, indent=2)}
+
+        Command: "{command}"
+
+        Analysis steps:
+        1. Identify the action to perform (e.g., grasp, move, speak)
+        2. Identify the target object ("blue ball")
+        3. Locate the object in the environment state
+        4. Calculate the required robot movements to reach the object
+        5. Generate specific ROS 2 action commands
+
+        Response format: JSON with "actions" array containing:
+        - action_type: Type of action (move_to, grasp, etc.)
+        - parameters: Specific parameters for the action
+        - priority: Execution priority (1-10)
+
+        For grasping tasks:
+        - First, move to a position where the object is reachable
+        - Then, execute the grasp action with specific coordinates
+        - Consider the robot's kinematic constraints
+        """
+        return prompt
+
+    def map_command_to_ros_coordinates(self, command: str) -> List[Dict]:
+        """
+        Map a natural language command to specific ROS 2 coordinate actions
+        Example: "Pick up the blue ball" -> [move_to coordinates, grasp action]
+        """
+        # Example implementation for "Pick up the blue ball"
+        if "pick up" in command.lower() and "blue ball" in command.lower():
+            # 1. Find the blue ball in the environment
+            blue_ball_position = self.find_object_position("blue ball")
+
+            # 2. Calculate approach position (slightly in front of the object)
+            approach_position = self.calculate_approach_position(
+                blue_ball_position,
+                approach_distance=0.1  # 10cm in front
+            )
+
+            # 3. Calculate grasp position (at the object)
+            grasp_position = blue_ball_position
+
+            # 4. Generate ROS 2 action sequence
+            actions = [
+                {
+                    "action_type": "move_to",
+                    "parameters": {
+                        "target_pose": {
+                            "position": approach_position,
+                            "orientation": [0, 0, 0, 1]  # Default orientation
+                        },
+                        "planner": "nav2"
+                    },
+                    "priority": 5
+                },
+                {
+                    "action_type": "move_to",
+                    "parameters": {
+                        "target_pose": {
+                            "position": grasp_position,
+                            "orientation": [0, 0, 0, 1]
+                        },
+                        "approach_velocity": 0.1  # Slow approach for precision
+                    },
+                    "priority": 6
+                },
+                {
+                    "action_type": "grasp",
+                    "parameters": {
+                        "object_name": "blue ball",
+                        "grasp_type": "precision",
+                        "grasp_pose": grasp_position,
+                        "force_limit": 10.0  # Newtons
+                    },
+                    "priority": 7
+                }
+            ]
+
+            return actions
+
+        # Add more command patterns as needed
+        return []
+
+    def find_object_position(self, object_name: str) -> List[float]:
+        """
+        Find the 3D position of an object in the environment
+        In practice, this would query the robot's perception system
+        """
+        # This is a simplified example
+        # In practice, this would use computer vision and object detection
+        object_positions = {
+            "blue ball": [1.2, 0.5, 0.1],  # x, y, z coordinates
+            "red cup": [0.8, -0.3, 0.2],
+            "green box": [-0.5, 1.0, 0.05]
+        }
+
+        return object_positions.get(object_name.lower(), [0.0, 0.0, 0.0])
+
+    def calculate_approach_position(self, target_position: List[float], approach_distance: float) -> List[float]:
+        """
+        Calculate a safe approach position in front of the target
+        """
+        # For simplicity, approach from the robot's front
+        # In practice, consider optimal approach direction
+        approach_pos = target_position.copy()
+        approach_pos[0] -= approach_distance  # Approach from the front (negative x)
+
+        return approach_pos
+
+# Example usage for "Pick up the blue ball"
+def example_vla_mapping():
+    vla_engineer = VLAPromptEngineer()
+
+    command = "Pick up the blue ball"
+    actions = vla_engineer.map_command_to_ros_coordinates(command)
+
+    print(f"Command: {command}")
+    print("Generated ROS 2 actions:")
+    for i, action in enumerate(actions):
+        print(f"  {i+1}. {action['action_type']}")
+        print(f"     Parameters: {action['parameters']}")
+        print(f"     Priority: {action['priority']}")
+```
+
+### Mermaid.js Diagram: Conversational Robot Feedback Loop
+
+```mermaid
+graph TD
+    A[Voice Input: "Pick up the blue ball"] --> B[Whisper: Speech-to-Text]
+    B --> C[LLM: Command Interpretation]
+    C --> D[VLA: Coordinate Mapping]
+    D --> E[ROS 2: Action Execution]
+    E --> F[Robot: Physical Action]
+    F --> G[Sensor Feedback: Success/Error]
+    G --> H{Action Complete?}
+    H -->|No| I[Adjust & Retry]
+    H -->|Yes| J[Report Success]
+    I --> D
+    J --> A
+    style A fill:#e1f5fe
+    style B fill:#f3e5f5
+    style C fill:#e8f5e8
+    style D fill:#fff3e0
+    style E fill:#fce4ec
+    style F fill:#f3ebee
+    style G fill:#e8eaf6
+    style H fill:#e0f2f1
+    style I fill:#fff8e1
+    style J fill:#e8f5e8
+```
+
+### Integration with Module 1 (ROS 2) Concepts
+
+The voice-to-action system integrates with the ROS 2 infrastructure established in Module 1. Here's how to implement the complete system as a ROS 2 node:
+
+```python
+import rclpy
+from rclpy.node import Node
+from std_msgs.msg import String
+from geometry_msgs.msg import Pose
+from sensor_msgs.msg import JointState
+from builtin_interfaces.msg import Duration
+from trajectory_msgs.msg import JointTrajectory, JointTrajectoryPoint
+from humanoid_msgs.srv import ExecuteCommand
+import asyncio
+import threading
+
+class VoiceCommandNode(Node):
+    """
+    ROS 2 node that integrates voice processing with robot control
+    """
+    def __init__(self):
+        super().__init__('voice_command_node')
+
+        # Initialize voice processing components
+        self.whisper_processor = WhisperVoiceProcessor(api_key="your-api-key")
+        self.llm_bridge = LLMBridge(api_key="your-api-key")
+
+        # Publishers and subscribers
+        self.command_pub = self.create_publisher(String, 'voice_commands', 10)
+        self.joint_trajectory_pub = self.create_publisher(JointTrajectory, '/joint_trajectory', 10)
+        self.speech_pub = self.create_publisher(String, '/tts_input', 10)
+
+        # Service for external command execution
+        self.command_service = self.create_service(
+            ExecuteCommand,
+            'execute_voice_command',
+            self.execute_command_callback
+        )
+
+        # Timer for processing voice commands
+        self.process_timer = self.create_timer(1.0, self.process_voice_input)
+
+        self.get_logger().info('Voice command node initialized')
+
+    def execute_command_callback(self, request, response):
+        """
+        Service callback to execute voice commands
+        """
+        command = request.command
+        self.get_logger().info(f'Received command: {command}')
+
+        # Process the command asynchronously
+        def async_execute():
+            try:
+                # Run the async execution in a new event loop
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+                success = loop.run_until_complete(
+                    self.llm_bridge.execute_command_sequence(command)
+                )
+                response.success = success
+                response.message = "Command executed" if success else "Command failed"
+            except Exception as e:
+                response.success = False
+                response.message = f"Error: {str(e)}"
+
+        # Run in a separate thread to avoid blocking
+        thread = threading.Thread(target=async_execute)
+        thread.start()
+        thread.join()  # Wait for completion
+
+        return response
+
+    def process_voice_input(self):
+        """
+        Process voice input from microphone (simplified)
+        In practice, this would interface with audio input
+        """
+        # This is a simplified example
+        # In practice, you'd capture real audio from a microphone
+        pass
+
+    def publish_joint_trajectory(self, joint_positions, duration=5.0):
+        """
+        Publish joint trajectory commands to robot controllers
+        """
+        trajectory = JointTrajectory()
+        trajectory.joint_names = ["joint1", "joint2", "joint3"]  # Replace with actual joint names
+
+        point = JointTrajectoryPoint()
+        point.positions = joint_positions
+        point.time_from_start = Duration(sec=int(duration), nanosec=0)
+
+        trajectory.points.append(point)
+
+        self.joint_trajectory_pub.publish(trajectory)
+
+def main(args=None):
+    rclpy.init(args=args)
+    voice_node = VoiceCommandNode()
+
+    try:
+        rclpy.spin(voice_node)
+    except KeyboardInterrupt:
+        pass
+    finally:
+        voice_node.destroy_node()
+        rclpy.shutdown()
+
+if __name__ == '__main__':
+    main()
+```
+
+### Urdu Glossary Terms
+
+For the Urdu-Linguist, here are the technical terms that need to be translated consistently:
+
+- **Natural Language Understanding** → "قدرتی زبان کی سمجھ" (Qudrat-e-Zaban ki Samajh)
+- **Kinematics** → "گتیات" (Gatiat)
+- **Inverse Kinematics** → "معکوس گتیات" (Maakus Gatiat)
+- **Balance Control** → "توازن کنٹرول" (Tazan-e-Kontrol)
+- **Grasping** → "پکڑنا" (Pakarna)
+- **Voice-to-Action** → "آواز سے کارروائی" (Awaz se Kariroai)
+- **Vision-Language-Action** → "وژن-زبان-کارروائی" (Vision-Zaban-Kariroai)
+- **ROS 2** → "ROS 2" (Keep as acronym)
+- **OpenAI Whisper** → "OpenAI وِسپر" (OpenAI Whisper)
+- **Large Language Model** → "بڑا زبان کا ماڈل" (Bara Zaban ka Model)
+
+### Importance of Physical AI: Language as Interface to Reality
+
+The voice-to-action system represents a crucial bridge between human language and physical reality. It enables robots to understand natural human commands and translate them into meaningful physical actions. This integration of language processing with physical manipulation capabilities is fundamental to creating robots that can truly assist humans in everyday tasks.
+
+### Next Steps: Capstone Integration
+
+In the capstone project, we'll integrate all the concepts learned across Modules 1-4 to create a complete autonomous humanoid system that can understand voice commands, plan actions, maintain balance, and execute complex manipulation tasks.
+
+---
+
+### Key Takeaways
+
+1. **VLA Pipeline**: Complete flow from voice input to physical action
+2. **Whisper Integration**: How to use OpenAI Whisper for speech recognition
+3. **LLM Mapping**: Techniques for converting language to robot actions
+4. **ROS 2 Integration**: How to implement the system within ROS 2 framework
+5. **Prompt Engineering**: Critical for effective language-to-action mapping
