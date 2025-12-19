@@ -20,6 +20,9 @@ const config: Config = {
   // For GitHub pages deployment, it is often '/<projectName>/'
   baseUrl: '/',
 
+  // Add trailingSlash config to ensure proper routing on Vercel
+  trailingSlash: false, // Set to false to avoid issues with Vercel routing
+
   // GitHub pages deployment config.
   // If you aren't using GitHub pages, you don't need these.
   organizationName: 'physical-ai-humanoid-robotics-book', // Usually your GitHub org/user name.
