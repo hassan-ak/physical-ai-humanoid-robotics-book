@@ -212,6 +212,10 @@ See `.specify/memory/constitution.md` for code quality, testing, performance, se
 ## Active Technologies
 - TypeScript 5.x, JavaScript ES2022 + Docusaurus 3.x, React 18.x, Node.js 18+, npm/yarn (001-docusaurus-infrastructure)
 - File-based (MDX documentation files, configuration files) (001-docusaurus-infrastructure)
+- JSON, MDX, JavaScript/TypeScript (for Docusaurus framework) + Claude Code, Docusaurus 3.x, React 18.x, Node.js 18+ (003-intelligence-subagents)
+- File-based (JSON and MDX files in .claude/agents/ and .claude/skills/ directories) (003-intelligence-subagents)
+- MDX, Python 3.8+ (for ROS 2 Humble), JavaScript/TypeScript (for Docusaurus framework) + Docusaurus 3.x, React 18.x, Node.js 18+, ROS 2 Humble, rclpy client library (004-content-module1)
+- File-based (MDX content files in docs/ and i18n/ directories) (004-content-module1)
 
 ## Recent Changes
 - 001-docusaurus-infrastructure: Added TypeScript 5.x, JavaScript ES2022 + Docusaurus 3.x, React 18.x, Node.js 18+, npm/yarn

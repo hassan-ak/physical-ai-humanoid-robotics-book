@@ -1,0 +1,129 @@
+---
+title: "Week 1: Introduction to Physical AI"
+sidebar_position: 1
+---
+
+import ActionBar from '@site/src/components/ActionBar/ActionBar';
+
+# Week 1: Introduction to Physical AI
+
+<ActionBar />
+
+## Welcome to Physical AI and Humanoid Robotics
+
+Welcome to the fascinating field of Physical AI - where digital artificial intelligence meets the physical world through embodied humanoid robotics. As a startup founder in this space, understanding Physical AI is crucial for building the next generation of embodied AI systems that can transform industries. This course will take you from fundamental concepts to advanced implementations, culminating in a humanoid robotics capstone that reflects real-world startup challenges.
+
+### What is Physical AI?
+
+Physical AI is the concept that integrates traditional AI systems with physical humanoid bodies. Unlike purely digital AI, Physical AI systems bridge the gap between digital intelligence and physical embodiment. This creates a new paradigm where AI doesn't just process information but interacts with the physical world, learns from it, and adjusts its behavior accordingly.
+
+**Importance of Physical AI**: This fundamental concept is at the heart of all humanoid robotics systems - understanding how digital neural networks control physical actuators, how they process physical inputs, and how they adjust behavior based on physical interactions.
+
+### Embodied Intelligence Paradigm
+
+Embodied intelligence is the principle that real intelligence emerges from the interaction between an agent and its environment. Rather than processing abstract symbols, embodied agents learn through physical interaction with the world.
+
+In the context of humanoid robotics, this means:
+- Perception systems that interpret real-world sensory data
+- Control systems that generate appropriate physical responses
+- Learning systems that adjust behavior based on physical outcomes
+- Cognitive systems that reason based on physical experience
+
+### The Humanoid Robotics Landscape
+
+The field of humanoid robotics encompasses several key areas:
+
+1. **Locomotion**: How robots move through space (walking, running, climbing)
+2. **Manipulation**: How robots handle objects (grasping, tool use)
+3. **Perception**: How robots understand their environment (vision, touch, spatial awareness)
+4. **Cognition**: How robots make decisions and plan actions
+5. **Social Interaction**: How robots communicate and collaborate with humans
+
+### Overview of Sensory Systems
+
+Modern humanoid robots rely on various sensory systems to understand their environment:
+
+#### LIDAR (Light Detection and Ranging)
+- Provides 360-degree distance measurements
+- Critical for navigation and obstacle avoidance
+- Generates point cloud data for mapping
+
+#### IMU (Inertial Measurement Unit)
+- Measures acceleration and rotation rates
+- Essential for balance and motion control
+- Provides tilt data for locomotion systems
+
+#### Depth Cameras
+- Generate 3D spatial information
+- Enable object recognition and scene understanding
+- Provide accurate spatial knowledge for manipulation tasks
+
+### ROS 2 Humble Foundations
+
+Throughout this course, we will use ROS 2 Humble Hawksbill as our middleware framework. ROS 2 facilitates communication between all components of the humanoid robotics system.
+
+Here is a basic ROS 2 Python example that demonstrates the basic publisher pattern:
+
+```python
+import rclpy
+from rclpy.node import Node
+from std_msgs.msg import String
+
+class PhysicalAIPublisher(Node):
+    """
+    Basic ROS 2 publisher demonstrating Physical AI concepts
+    This node exemplifies how a humanoid robot broadcasts sensor data from its platform
+    """
+
+    def __init__(self):
+        super().__init__('physical_ai_publisher')
+
+        # Publisher for sensor data
+        self.publisher = self.create_publisher(String, 'sensor_data', 10)
+
+        # Timer period
+        timer_period = 0.5  # seconds
+        self.timer = self.create_timer(timer_period, self.timer_callback)
+
+        # Importance of Physical AI: This node demonstrates how a humanoid robot
+        # broadcasts sensory information from its platform (Jetson Orin Nano)
+        self.get_logger().info("Physical AI Sensor Data Publisher initialized")
+
+    def timer_callback(self):
+        """Publish sensor data that represents Physical AI sensor input"""
+        msg = String()
+        msg.data = f'Physical AI Sensor Reading at {self.get_clock().now()}'
+        self.publisher.publish(msg)
+        self.get_logger().info(f'Published: "{msg.data}"')
+
+def main(args=None):
+    rclpy.init(args=args)
+    physical_ai_publisher = PhysicalAIPublisher()
+
+    try:
+        rclpy.spin(physical_ai_publisher)
+    except KeyboardInterrupt:
+        print("Physical AI Publisher stopped by user")
+    finally:
+        physical_ai_publisher.destroy_node()
+        rclpy.shutdown()
+
+if __name__ == '__main__':
+    main()
+```
+
+### Hardware Foundation: NVIDIA Jetson Orin Nano
+
+Our reference platform for this course uses the NVIDIA Jetson Orin Nano, which provides the computational power necessary for real-time Physical AI processing:
+
+- **GPU**: 1024-core NVIDIA Ampere architecture GPU
+- **CPU**: Quad-core Arm Cortex-A78AE v8.2 64-bit CPU
+- **Memory**: 4GB or 8GB LPDDR5
+- **Power**: 15W power envelope
+- **ROS 2 Support**: Full compatibility with ROS 2 Humble
+
+The Jetson Orin Nano enables real-time sensor data processing, computer vision algorithms, and AI inference to run directly on the humanoid robot platform.
+
+### Next Steps
+
+In Week 2, we will dive deeper into the humanoid robotics landscape and detail specific platforms like the Unitree G1 that exemplify these Physical AI concepts.

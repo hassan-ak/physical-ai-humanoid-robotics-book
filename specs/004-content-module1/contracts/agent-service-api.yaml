@@ -1,0 +1,265 @@
+# Agent Service API Contract for Module 1 Content Generation
+
+## Overview
+API contract for the agent orchestration service that manages subagent workflows for generating Module 1 content (The Robotic Nervous System).
+
+## Base URL
+`/api/agents`
+
+## Authentication
+No authentication required for internal subagent communication (as specified in previous features)
+
+## Endpoints
+
+### 1. Generate Module 1 Content
+**POST** `/api/agents/generate/module-1`
+
+#### Request
+```json
+{
+  "moduleId": "module-1",
+  "weekNumber": 1,
+  "topic": "Introduction to Physical AI",
+  "requirements": {
+    "technical_depth": "beginner",
+    "hardware_focus": ["Jetson Orin", "RealSense D435i"],
+    "code_examples": true,
+    "target_language": "en",
+    "tone": "startup-founder",
+    "diagrams_required": true,
+    "mermaid_diagrams": ["ros2-graph", "node-lifecycle"]
+  },
+  "options": {
+    "include_urdu_translation": true,
+    "apply_styling": true
+  }
+}
+```
+
+#### Response
+```json
+{
+  "generationId": "string",
+  "status": "pending|running|completed|failed",
+  "steps": [
+    {
+      "stepId": "string",
+      "agent": "robotics-architect|urdu-linguist|content-stylist",
+      "status": "pending|running|completed|failed",
+      "timestamp": "datetime"
+    }
+  ],
+  "estimatedCompletion": "datetime",
+  "output": {
+    "englishFile": "docs/module-1/week-1.mdx",
+    "urduFile": "i18n/ur/docusaurus-plugin-content-docs/current/module-1/week-1.mdx",
+    "wordCount": "number",
+    "technicalAccuracy": "0-100"
+  }
+}
+```
+
+#### Error Responses
+- `400`: Invalid input parameters
+- `500`: Internal agent service error
+
+### 2. Generate ROS 2 Code Example
+**POST** `/api/agents/generate/code-example`
+
+#### Request
+```json
+{
+  "moduleId": "module-1",
+  "weekNumber": 3,
+  "topic": "ROS 2 Node Architecture",
+  "language": "python",
+  "rosVersion": "humble",
+  "patterns": ["oop", "publisher", "subscriber"],
+  "hardwareTarget": "jetson-orin-nano",
+  "requirements": {
+    "include_comments": true,
+    "follow_rclpy_standards": true,
+    "error_handling": true
+  }
+}
+```
+
+#### Response
+```json
+{
+  "codeExampleId": "string",
+  "status": "completed|failed",
+  "code": "string (formatted code example)",
+  "explanation": "string (explanation of the code)",
+  "technicalInsights": "string (insights from Robotics-Architect)",
+  "rosStandardsCompliance": "boolean",
+  "estimatedLines": "number"
+}
+```
+
+#### Error Responses
+- `400`: Invalid code generation parameters
+- `500`: Code generation service error
+
+### 3. Translate Content to Urdu
+**POST** `/api/agents/translate/urdu`
+
+#### Request
+```json
+{
+  "contentId": "module-1-week-3",
+  "sourceContent": "string (MDX content in English)",
+  "preserveCodeBlocks": true,
+  "context": {
+    "technical_terms": ["ROS 2", "rclpy", "Node", "Topic"],
+    "domain": "robotics",
+    "consistent_terms": {
+      "nervous_system": "Aasabi Nizam",
+      "node": "Girah"
+    }
+  }
+}
+```
+
+#### Response
+```json
+{
+  "translationId": "string",
+  "status": "processing|completed|failed",
+  "translatedContent": "string (MDX content in Urdu)",
+  "wordCount": "number",
+  "confidence": "0-100",
+  "termsUsed": "object (mapping of technical terms used)"
+}
+```
+
+#### Error Responses
+- `400`: Invalid content format
+- `500`: Translation service error
+
+### 4. Apply Styling and Tone
+**POST** `/api/agents/style/content`
+
+#### Request
+```json
+{
+  "contentId": "module-1-week-2",
+  "rawContent": "string (MDX content)",
+  "styleRequirements": {
+    "tone": "startup-founder",
+    "components": ["ActionBar", "Callouts", "Diagrams"],
+    "formatting": "mdx-standard"
+  },
+  "validation": {
+    "technical_accuracy": true,
+    "readability": true
+  }
+}
+```
+
+#### Response
+```json
+{
+  "styledContentId": "string",
+  "status": "completed|failed",
+  "styledContent": "string (MDX content with applied styling)",
+  "appliedStyles": ["startup-founder-tone", "mdx-components", "readability-improvements"],
+  "qualityScore": "0-100"
+}
+```
+
+#### Error Responses
+- `400`: Invalid styling parameters
+- `500`: Styling service error
+
+### 5. Generate Mermaid Diagram
+**POST** `/api/agents/generate/diagram`
+
+#### Request
+```json
+{
+  "diagramId": "ros2-graph-week3",
+  "diagramType": "graph|sequence|flowchart|state",
+  "topic": "ROS 2 Graph",
+  "elements": ["nodes", "topics", "services", "communication-patterns"],
+  "complexity": "simple|intermediate|advanced",
+  "targetFormat": "mermaid"
+}
+```
+
+#### Response
+```json
+{
+  "diagramId": "string",
+  "status": "completed|failed",
+  "mermaidSyntax": "string (valid mermaid.js syntax)",
+  "description": "string (explanation of the diagram)",
+  "elementCount": "number"
+}
+```
+
+#### Error Responses
+- `400`: Invalid diagram parameters
+- `500`: Diagram generation service error
+
+### 6. Get Content Generation Status
+**GET** `/api/agents/generate/status/{generationId}`
+
+#### Response
+```json
+{
+  "generationId": "string",
+  "status": "pending|running|completed|failed",
+  "progress": "0-100",
+  "steps": [
+    {
+      "stepId": "string",
+      "agent": "robotics-architect|urdu-linguist|content-stylist",
+      "status": "pending|running|completed|failed",
+      "input": "string",
+      "output": "string",
+      "startTime": "datetime",
+      "endTime": "datetime",
+      "duration": "number (ms)"
+    }
+  ],
+  "createdAt": "datetime",
+  "updatedAt": "datetime",
+  "result": {
+    "englishFile": "string",
+    "urduFile": "string (if applicable)",
+    "qualityMetrics": {
+      "technicalAccuracy": "0-100",
+      "readability": "0-100",
+      "toneConsistency": "0-100"
+    }
+  }
+}
+```
+
+#### Error Responses
+- `404`: Generation ID not found
+
+## Common Error Format
+```json
+{
+  "error": {
+    "code": "string",
+    "message": "string",
+    "details": "object (optional)"
+  }
+}
+```
+
+## Headers
+- `Content-Type`: `application/json`
+- `Accept`: `application/json`
+
+## Rate Limiting
+- Default: 100 requests per minute per IP
+- Burst: 20 requests
+- When rate-limited: HTTP 429 response with `Retry-After` header
+
+## Response Time SLA
+- 95th percentile: <2 seconds for simple operations
+- 99th percentile: <10 seconds for complex generation workflows

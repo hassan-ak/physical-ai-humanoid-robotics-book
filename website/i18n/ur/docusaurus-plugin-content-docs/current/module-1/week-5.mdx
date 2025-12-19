@@ -1,0 +1,506 @@
+---
+title: "ہفتہ 5: روبوٹ کی شناخت"
+sidebar_position: 5
+---
+
+import ActionBar from '@site/src/components/ActionBar/ActionBar';
+
+# ہفتہ 5: روبوٹ کی شناخت
+
+<ActionBar />
+
+## فزیکل AI میں روبوٹ کی شناخت کا تعین
+
+اس ماڈیول 1 کے آخری ہفتے میں، ہم اس بات کا جائزہ لیتے ہیں کہ روبوٹس فزیکل AI فریم ورک کے اندر اپنی شناخت کیسے قائم کرتے ہیں۔ روبوٹ کی شناخت صرف میکانیکل تفصیلات کو نہیں بلکہ طرز عمل کے نمونوں، صلاحیات، اور ڈیجیٹل نمائندگی اور جسمانی امبدمنٹ کے درمیان انضمام کو بھی شامل کرتی ہے۔
+
+### URDF کے ساتھ روبوٹ کی تفصیل
+
+URDF (یونیفائیڈ روبوٹ ڈسکریپشن فارمیٹ) ROS میں روبوٹس کی وضاحت کرنے کا معیاری طریقہ ہے۔ یہ روبوٹ کی جسمانی اور بصری خصوصیات کی وضاحت کرتا ہے، بشمول لنکس، جوائنٹس، ایشاریل پراپرٹیز، اور بصری/تصادم مشینوں کو۔
+
+ہیومنوائڈ روبوٹس کے لیے، URDF خاص طور پر پیچیدہ ہے کیونکہ اسے دوپا والکنگ سسٹم کی مفصل ساخت کو ظاہر کرنا ہوتا ہے۔
+
+#### URDF سٹرکچر کے لیے URDF نمونہ
+
+```xml
+<?xml version="1.0"?>
+<robot name="humanoid_robot" xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <!-- بیس لنک -->
+  <link name="base_link">
+    <visual>
+      <geometry>
+        <box size="0.2 0.1 0.1"/>
+      </geometry>
+      <material name="blue">
+        <color rgba="0 0 1 1"/>
+      </material>
+    </visual>
+    <collision>
+      <geometry>
+        <box size="0.2 0.1 0.1"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <mass value="10.0"/>
+      <inertia ixx="0.1" ixy="0.0" ixz="0.0" iyy="0.1" iyz="0.0" izz="0.1"/>
+    </inertial>
+  </link>
+
+  <!-- ٹورسو -->
+  <link name="torso">
+    <visual>
+      <geometry>
+        <box size="0.15 0.2 0.1"/>
+      </geometry>
+      <material name="gray">
+        <color rgba="0.5 0.5 0.5 1"/>
+      </material>
+    </visual>
+    <collision>
+      <geometry>
+        <box size="0.15 0.2 0.1"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <mass value="5.0"/>
+      <inertia ixx="0.05" ixy="0.0" ixz="0.0" iyy="0.05" iyz="0.0" izz="0.05"/>
+    </inertial>
+  </link>
+
+  <!-- ٹورسو سے جڑنے والا جوائنٹ -->
+  <joint name="base_to_torso" type="fixed">
+    <parent link="base_link"/>
+    <child link="torso"/>
+    <origin xyz="0 0 0.15" rpy="0 0 0"/>
+  </joint>
+
+  <!-- بائیں ٹانگ کا ڈھانچہ -->
+  <link name="left_hip">
+    <visual>
+      <geometry>
+        <cylinder length="0.1" radius="0.05"/>
+      </geometry>
+      <material name="red">
+        <color rgba="1 0 0 1"/>
+      </material>
+    </visual>
+    <inertial>
+      <mass value="2.0"/>
+      <inertia ixx="0.01" ixy="0.0" ixz="0.0" iyy="0.01" iyz="0.0" izz="0.01"/>
+    </inertial>
+  </link>
+
+  <joint name="torso_to_left_hip" type="revolute">
+    <parent link="torso"/>
+    <child link="left_hip"/>
+    <origin xyz="-0.05 -0.08 -0.1" rpy="0 0 0"/>
+    <axis xyz="0 0 1"/>
+    <limit lower="-1.57" upper="1.57" effort="100" velocity="3"/>
+  </joint>
+
+  <!-- دائیں ٹانگ کا ڈھانچہ -->
+  <link name="right_hip">
+    <visual>
+      <geometry>
+        <cylinder length="0.1" radius="0.05"/>
+      </geometry>
+      <material name="red">
+        <color rgba="1 0 0 1"/>
+      </material>
+    </visual>
+    <inertial>
+      <mass value="2.0"/>
+      <inertia ixx="0.01" ixy="0.0" ixz="0.0" iyy="0.01" iyz="0.0" izz="0.01"/>
+    </inertial>
+  </link>
+
+  <joint name="torso_to_right_hip" type="revolute">
+    <parent link="torso"/>
+    <child link="right_hip"/>
+    <origin xyz="0.05 -0.08 -0.1" rpy="0 0 0"/>
+    <axis xyz="0 0 1"/>
+    <limit lower="-1.57" upper="1.57" effort="100" velocity="3"/>
+  </joint>
+
+  <!-- اضافی لنکس اور جوائنٹس پورے ہیومنوائڈ ڈھانچے کے لیے جاری رہیں گے -->
+</robot>
+```
+
+### ہیومنوائڈ روبوٹ کنیمیٹک سٹرکچر
+
+ایک معمولی ہیومنوائڈ روبوٹ درج ذیل پر مشتمل ہوتا ہے:
+
+- **ٹرังک**: ٹورسو اور pelvis
+- **اعضاء**: دو بازوؤں اور دو ٹانگوں
+- **اینڈ ایفیکٹرز**: ہاتھ اور پاؤں
+- **سینسرز**: کیمرے، IMUs، فورس/ٹورک سینسرز
+- **ایکٹو ایٹرز**: ہر جوائنٹ پر موٹرز
+
+### ROS 2 پیکجز کی تعمیر
+
+ROS 2 پیکجز روبوٹ کی فعالیت کو ماڈیولر اور دوبارہ استعمال کے قابل بنانے کے لیے فراہم کرتے ہیں۔ ہیومنوائڈ روبوٹس کے لیے عام پیکج کی اقسام درج ذیل ہیں:
+
+1. **تفصیل پیکجز**: URDF اور مشین فائلیں رکھتے ہیں
+2. **کنٹرول پیکجز**: روبوٹ کنٹرولرز کو نافذ کرتے ہیں
+3. **نیوی گیشن پیکجز**: راستہ منصوبہ بندی اور رکاوٹوں سے بچاؤ کو سنبھالتے ہیں
+4. **ادراک پیکجز**: سینسر ڈیٹا کو پروسیس کرتے ہیں
+5. **برتاؤ پیکجز**: بلند سطح کے برتاؤ کو نافذ کرتے ہیں
+
+#### ہیومنوائڈ روبوٹ پیکج کی تخلیق
+
+یہاں ہیومنوائڈ روبوٹ کے لیے ایک حسب ضرورت ROS 2 پیکج بنانے کا طریقہ ہے:
+
+```bash
+# پیکج کا ڈھانچہ بنائیں
+ros2 pkg create --build-type ament_python humanoid_robot_description --dependencies rclpy geometry_msgs sensor_msgs std_msgs
+```
+
+یہ پیکج درج ذیل ڈھانچہ بناتا ہے:
+
+```
+humanoid_robot_description/
+├── humanoid_robot_description/
+│   ├── __init__.py
+│   └── robot_controller.py
+├── urdf/
+│   └── humanoid_robot.urdf.xacro
+├── meshes/
+│   ├── torso.dae
+│   ├── hip.dae
+│   └── ...
+├── launch/
+│   └── robot.launch.py
+├── test/
+├── package.xml
+├── setup.cfg
+├── setup.py
+└── README.md
+```
+
+### ہارڈ ویئر انٹیگریشن کی مثال
+
+یہاں NVIDIA جیٹسن اورن نینو ہارڈ ویئر کے ساتھ کام کرنے کے لیے ایک پائی تھون کی مثال ہے:
+
+```python
+import rclpy
+from rclpy.node import Node
+from sensor_msgs.msg import JointState
+from std_msgs.msg import String, Float64MultiArray
+from builtin_interfaces.msg import Duration
+
+class HumanoidHardwareInterface(Node):
+    """
+    ہیومنوائڈ روبوٹ کنٹرول کے لیے ROS 2 نوڈ
+    جوائنٹ کنٹرول، بیلنس مینجمنٹ، اور سینسر انٹیگریشن کو نافذ کرتا ہے
+    """
+
+    def __init__(self):
+        super().__init__('humanoid_hardware_interface')
+
+        # مختلف کنٹرول موڈلیٹیز کے لیے پبلشرز
+        self.joint_command_pub = self.create_publisher(
+            Float64MultiArray,
+            '/joint_group_position_controller/commands',
+            10
+        )
+
+        self.balance_feedback_pub = self.create_publisher(
+            Float64MultiArray,
+            'balance_feedback',
+            10
+        )
+
+        # سینسر فیڈ بیک کے لیے سبسکرائبرز
+        self.joint_state_sub = self.create_subscription(
+            JointState,
+            'joint_states',
+            self.joint_state_callback,
+            10
+        )
+
+        self.imu_sub = self.create_subscription(
+            Float64MultiArray,  # IMU ڈیٹا کی سادہ نمائندگی
+            'imu_data',
+            self.imu_callback,
+            10
+        )
+
+        # کنٹرول لوپ کے لیے ٹائمر
+        control_frequency = 100  # Hz
+        self.control_timer = self.create_timer(1.0/control_frequency, self.control_loop)
+
+        # فزیکل AI کی اہمیت: یہ کنٹرولر ظاہر کرتا ہے کہ ڈیجیٹل AI
+        # سسٹم فزیکل ہیومنوائڈ ایکٹو ایٹرز کے ساتھ تعامل کیسے کرتے ہیں
+        self.get_logger().info("ہیومنوائڈ ہارڈ ویئر انٹرفیس فزیکل AI اصولوں کے ساتھ تنصیب شدہ")
+
+        # ہیومنوائڈ کنٹرول کے لیے داخلی حالت
+        self.current_joint_positions = []
+        self.imu_orientation = [0.0, 0.0, 0.0, 1.0]  # کوآٹرنین
+        self.balance_state = {'left_foot': 0.0, 'right_foot': 0.0, 'torso': 0.0}
+        self.desired_joints = [0.0] * 32  # 32 DOF ہیومنوائڈ کا فرض کریں
+
+    def joint_state_callback(self, msg):
+        """انکمنگ جوائنٹ اسٹیٹس میسجس کو پروسیس کریں"""
+        self.current_joint_positions = list(msg.position)
+        self.get_logger().debug(f'{len(self.current_joint_positions)} جوائنٹ پوزیشنز کو اپ ڈیٹ کیا گیا')
+
+    def imu_callback(self, msg):
+        """توازن کنٹرول کے لیے IMU ڈیٹا کو پروسیس کریں"""
+        if len(msg.data) >= 4:
+            self.imu_orientation = list(msg.data[:4])  # پہلے 4 ویلیوز کو کوآٹرنین کے بطور
+        self.update_balance_state()
+
+    def update_balance_state(self):
+        """سینسر فیڈ بیک کی بنیاد پر داخلی توازن کی حالت کو اپ ڈیٹ کریں"""
+        # سادہ توازن کی گنتی
+        roll, pitch, yaw = self.quaternion_to_euler(self.imu_orientation)
+
+        self.balance_state = {
+            'left_foot': roll - 0.1,  # بائیں پاؤں کے لیے آفسیٹ
+            'right_foot': roll + 0.1,  # دائیں پاؤں کے لیے آفسیٹ
+            'torso': pitch
+        }
+
+    def quaternion_to_euler(self, q):
+        """کوآٹرنین کو اویلر اینگلز (رول، پچ، یو) میں تبدیل کریں"""
+        import math
+
+        w, x, y, z = q
+        sinr_cosp = 2 * (w * x + y * z)
+        cosr_cosp = 1 - 2 * (x * x + y * y)
+        roll = math.atan2(sinr_cosp, cosr_cosp)
+
+        sinp = 2 * (w * y - z * x)
+        if abs(sinp) >= 1:
+            pitch = math.copysign(math.pi / 2, sinp)  # 90 ڈگری اگر حد سے باہر ہو
+        else:
+            pitch = math.asin(sinp)
+
+        siny_cosp = 2 * (w * z + x * y)
+        cosy_cosp = 1 - 2 * (y * y + z * z)
+        yaw = math.atan2(siny_cosp, cosy_cosp)
+
+        return roll, pitch, yaw
+
+    def control_loop(self):
+        """ہیومنوائڈ روبوٹ کے لیے مرکزی کنٹرول لوپ"""
+        # توازن کی حالت کے مطابق مطلوبہ جوائنٹ پوزیشنز کا حساب لگائیں
+        desired_positions = self.calculate_balance_correction()
+
+        # جوائنٹ کمانڈز شائع کریں
+        cmd_msg = Float64MultiArray()
+        cmd_msg.data = desired_positions
+        self.joint_command_pub.publish(cmd_msg)
+
+        # توازن فیڈ بیک شائع کریں
+        feedback_msg = Float64MultiArray()
+        feedback_msg.data = [self.balance_state['torso'], self.balance_state['left_foot'], self.balance_state['right_foot']]
+        self.balance_feedback_pub.publish(feedback_msg)
+
+        # فزیکل AI کی اہمیت: یہ کنٹرول لوپ ظاہر کرتا ہے کہ AI الگورتھم
+        # جسمانی ہارڈ ویئر کے ساتھ مسلسل تعامل کیسے کرتے ہیں تاکہ استحکام برقرار رکھا جا سکے
+        self.get_logger().debug(f'کنٹرول لوپ ایگزیکیوٹ کیا گیا، توازن: torso={self.balance_state["torso"]:.3f}')
+
+    def calculate_balance_correction(self):
+        """توازن کی دیکھ بھال کے لیے جوائنٹ پوزیشنز کی اصلاحات کا حساب لگائیں"""
+        # سادہ توازن کنٹرول الگورتھم
+        corrections = [0.0] * len(self.desired_joints)
+
+        # توازن کی حالت کے مطابق ایڈجسٹ کریں
+        corrections[0] = -self.balance_state['torso'] * 0.5  # کمربند ایڈجسٹمنٹ
+        corrections[1] = self.balance_state['torso'] * 0.5   # مخالف کمربند ایڈجسٹمنٹ
+
+        return [orig + corr for orig, corr in zip(self.desired_joints, corrections)]
+
+def main(args=None):
+    rclpy.init(args=args)
+
+    humanoid_hw_interface = HumanoidHardwareInterface()
+
+    try:
+        rclpy.spin(humanoid_hw_interface)
+    except KeyboardInterrupt:
+        print("ہیومنوائڈ ہارڈ ویئر انٹرفیس کو صارف نے روک دیا")
+    finally:
+        humanoid_hw_interface.destroy_node()
+        rclpy.shutdown()
+
+if __name__ == '__main__':
+    main()
+```
+
+### URDF اور ROS 2 انٹیگریشن
+
+URDF فائلز ROS 2 کے ساتھ درج ذیل طریقے سے انٹیگریٹ ہوتی ہیں:
+
+1. **روبوٹ اسٹیٹ پبلشر**: جوائنٹ اسٹیٹس کو ٹرانسفارمز (tf) میں تبدیل کرتا ہے
+2. **جوائنٹ اسٹیٹ پبلشر**: جوائنٹ پوزیشنز، ویلیوسیٹیز، اور ایفورٹس شائع کرتا ہے
+3. **کنٹرولرز**: ہارڈ ویئر کے ساتھ رابطہ کے لیے کنٹرول کا استعمال کرتے ہیں
+4. **ویژویلائزیشن**: RViz اور دیگر ٹولز روبوٹ ماڈلز کو دکھاتے ہیں
+
+#### لانچ فائل کی مثال
+
+یہاں ایک لانچ فائل ہے جو روبوٹ اسٹیٹ پبلشرز کو چلاتی ہے:
+
+```python
+from launch import LaunchDescription
+from launch.actions import DeclareLaunchArgument
+from launch.substitutions import LaunchConfiguration
+from launch_ros.actions import Node
+from launch.substitutions import Command
+
+
+def generate_launch_description():
+    return LaunchDescription([
+        # لانچ آرگومنٹس کا اعلان کریں
+        DeclareLaunchArgument(
+            'model',
+            default_value='humanoid_robot.urdf.xacro',
+            description='روبوٹ ماڈل کے لیے URDF فائل'
+        ),
+
+        # روبوٹ اسٹیٹ پبلشر
+        Node(
+            package='robot_state_publisher',
+            executable='robot_state_publisher',
+            name='robot_state_publisher',
+            output='screen',
+            parameters=[{
+                'robot_description': Command([
+                    'xacro ', LaunchConfiguration('model')
+                ])
+            }]
+        ),
+
+        # جوائنٹ اسٹیٹ پبلشر
+        Node(
+            package='joint_state_publisher',
+            executable='joint_state_publisher',
+            name='joint_state_publisher',
+            output='screen'
+        )
+    ])
+```
+
+### انٹیل ریئل سینس D435i کے ساتھ انٹیگریشن
+
+انٹیل ریئل سینس D435i فزیکل AI سسٹم کے لیے گہرائی اور IMU ڈیٹا فراہم کرتا ہے:
+
+- **ڈیپتھ کیمرہ**: 3D ادراک اور جگہ کے انداز کو فعال کرتا ہے
+- **IMU**: توازن اور حرکت کنٹرول کے لیے جھکاؤ اور ایکسلریشن ڈیٹا فراہم کرتا ہے
+- **RGB کیمرہ**: وژن کی پہچان کے مواقع فراہم کرتا ہے
+
+#### ریئل سینس انٹیگریشن کی مثال
+
+```python
+import rclpy
+from rclpy.node import Node
+from sensor_msgs.msg import Image, Imu
+from cv_bridge import CvBridge
+import pyrealsense2 as rs
+import numpy as np
+
+
+class RealSenseInterface(Node):
+    """
+    انٹیل ریئل سینس D435i ڈیپتھ کیمرے کے لیے انٹرفیس
+    فزیکل AI سسٹم کے لیے ڈیپتھ امیجز، RGB امیجز، اور IMU ڈیٹا فراہم کرتا ہے
+    """
+
+    def __init__(self):
+        super().__init__('realsense_interface')
+
+        # مختلف سینسر ڈیٹا کے لیے پبلشرز
+        self.depth_pub = self.create_publisher(Image, 'depth/image_rect_raw', 10)
+        self.rgb_pub = self.create_publisher(Image, 'rgb/image_rect_color', 10)
+        self.imu_pub = self.create_publisher(Imu, 'imu/data', 10)
+
+        # ٹائمر کے لیے فریم کیپچر
+        self.capture_timer = self.create_timer(0.033, self.capture_frames)  # ~30 FPS
+
+        # CV برج کے لیے
+        self.cv_bridge = CvBridge()
+
+        # فزیکل AI کی اہمیت: یہ انٹرفیس 3D ادراک
+        # کی صلاحیات فراہم کرتا ہے فزیکل AI سسٹم کے لیے دنیا کو سمجھنے کے لیے
+        self.get_logger().info("ریئل سینس D435i انٹرفیس تنصیب شدہ")
+
+    def capture_frames(self):
+        """ریئل سینس کیمرے سے فریم کو کیپچر کریں اور ROS 2 میسجس کے بطور شائع کریں"""
+        try:
+            # فریم کیپچر کا عمل (سادہ کردہ)
+            # حقیقی سسٹم میں، یہ ریئل سینس API کے ساتھ رابطہ کرے گا
+
+            # ڈیپتھ امیج کو شبیہ دیں
+            depth_msg = Image()
+            depth_msg.header.stamp = self.get_clock().now().to_msg()
+            depth_msg.header.frame_id = 'camera_depth_optical_frame'
+            # ڈیٹا کو شبیہ دیں
+            self.depth_pub.publish(depth_msg)
+
+            # RGB امیج کو شبیہ دیں
+            rgb_msg = Image()
+            rgb_msg.header.stamp = self.get_clock().now().to_msg()
+            rgb_msg.header.frame_id = 'camera_rgb_optical_frame'
+            # ڈیٹا کو شبیہ دیں
+            self.rgb_pub.publish(rgb_msg)
+
+            # IMU ڈیٹا کو شبیہ دیں
+            imu_msg = Imu()
+            imu_msg.header.stamp = self.get_clock().now().to_msg()
+            imu_msg.header.frame_id = 'camera_imu_frame'
+
+            # زاویہ کی رفتار سیٹ کریں
+            imu_msg.angular_velocity.x = 0.0
+            imu_msg.angular_velocity.y = 0.0
+            imu_msg.angular_velocity.z = 0.0
+
+            # لکیری تیزی سیٹ کریں
+            imu_msg.linear_acceleration.x = 0.0
+            imu_msg.linear_acceleration.y = 0.0
+            imu_msg.linear_acceleration.z = 9.81  # گریویٹی
+
+            self.imu_pub.publish(imu_msg)
+
+            self.get_logger().debug("ریئل سینس فریم کیپچر اور شائع کیے گئے")
+
+        except Exception as e:
+            self.get_logger().error(f"ریئل سینس فریم کیپچر میں نقص: {str(e)}")
+
+    def destroy_node(self):
+        """ریئل سینس وسائل کو صاف کریں"""
+        # حقیقی سسٹم میں، یہ ریئل سینس ڈیوائس کو بند کرے گا
+        super().destroy_node()
+
+
+def main(args=None):
+    rclpy.init(args=args)
+
+    realsense_interface = RealSenseInterface()
+
+    try:
+        rclpy.spin(realsense_interface)
+    except KeyboardInterrupt:
+        print("ریئل سینس انٹرفیس کو صارف نے روک دیا")
+    finally:
+        realsense_interface.destroy_node()
+        rclpy.shutdown()
+
+if __name__ == '__main__':
+    main()
+```
+
+### ماڈیول کا خلاصہ
+
+اس ماڈیول میں، ہم فزیکل AI اور ہیومنوائڈ روبوٹکس کے بنیادی تصورات کا جائزہ لیتے ہیں:
+
+1. **ہفتہ 1**: فزیکل AI اور امبیڈڈ انٹیلی جنس کا تعارف
+2. **ہفتہ 2**: ہیومنوائڈ روبوٹکس کا منظر نامہ اور پلیٹ فارم کا جائزہ
+3. **ہفتہ 3**: ROS 2 آرکیٹیکچر اور نوڈ کمیونیکیشن
+4. **ہفتہ 4**: مواصلات کے نمونے (ٹاپکس، سروسز، ایکشنز)
+5. **ہفتہ 5**: روبوٹ کی شناخت URDF اور ہارڈ ویئر انٹیگریشن کے ساتھ
+
+یہ تصورات ہیومنوائڈ روبوٹکس کے میدان میں جدید فزیکل AI سسٹم کی تعمیر کے لیے بنیاد فراہم کرتے ہیں۔ ROS 2 کے مناسب آرکیٹیکچر، مواصلات کے نمونے، اور ہارڈ ویئر انٹیگریشن کا مجموعہ AI سسٹم کو جسمانی دنیا کے ساتھ معنی خیز تعاملات کے قابل بناتا ہے۔
+
+### اگلے اقدامات
+
+یہ ماڈیول 1: روبوٹک نروس سسٹم مکمل کرتا ہے۔ بعد کے ماڈیولز میں، ہم ہیومنوائڈ کنٹرول سسٹم کے عملی نفاذ میں گہرائی سے جائیں گے، اس ماڈیول میں حاصل کردہ بنیادی علم پر تعمیر کریں گے۔

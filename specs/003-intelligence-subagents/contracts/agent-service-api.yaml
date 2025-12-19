@@ -1,0 +1,208 @@
+# Agent Service API Contract
+
+## Overview
+API contract for the agent orchestration service that manages subagent workflows for content generation, translation, and styling.
+
+## Base URL
+`/api/agents`
+
+## Authentication
+No authentication required for internal subagent communication (as specified in clarifications)
+
+## Endpoints
+
+### 1. Trigger Content Generation Workflow
+**POST** `/api/agents/workflows/content-generation`
+
+#### Request
+```json
+{
+  "contentId": "string",
+  "input": {
+    "title": "string",
+    "topic": "string",
+    "requirements": {
+      "technical_depth": "beginner|intermediate|advanced",
+      "hardware_focus": ["Jetson Orin", "Unitree G1", "RealSense D435i"],
+      "code_examples": true,
+      "target_language": "en"
+    }
+  },
+  "options": {
+    "include_urdu_translation": false,
+    "apply_styling": true
+  }
+}
+```
+
+#### Response
+```json
+{
+  "workflowId": "string",
+  "status": "pending|running|completed|failed",
+  "steps": [
+    {
+      "stepId": "string",
+      "agent": "robotics-architect|urdu-linguist|content-stylist",
+      "status": "pending|running|completed|failed",
+      "timestamp": "datetime"
+    }
+  ],
+  "estimatedCompletion": "datetime",
+  "output": "string (URL to generated content)"
+}
+```
+
+#### Error Responses
+- `400`: Invalid input parameters
+- `500`: Internal agent service error
+
+### 2. Trigger Urdu Translation
+**POST** `/api/agents/translate/urdu`
+
+#### Request
+```json
+{
+  "contentId": "string",
+  "sourceContent": "string (MDX content in English)",
+  "preserveCodeBlocks": true,
+  "context": {
+    "technical_terms": ["ROS 2", "rclpy", "humanoid kinematics"],
+    "domain": "robotics"
+  }
+}
+```
+
+#### Response
+```json
+{
+  "translationId": "string",
+  "status": "processing|completed|failed",
+  "translatedContent": "string (MDX content in Urdu)",
+  "wordCount": "number",
+  "confidence": "0-100"
+}
+```
+
+#### Error Responses
+- `400`: Invalid content format
+- `500`: Translation service error
+
+### 3. Get Workflow Status
+**GET** `/api/agents/workflows/{workflowId}`
+
+#### Response
+```json
+{
+  "workflowId": "string",
+  "status": "pending|running|completed|failed",
+  "progress": "0-100",
+  "steps": [
+    {
+      "stepId": "string",
+      "agent": "robotics-architect|urdu-linguist|content-stylist",
+      "status": "pending|running|completed|failed",
+      "input": "string",
+      "output": "string",
+      "startTime": "datetime",
+      "endTime": "datetime",
+      "duration": "number (ms)"
+    }
+  ],
+  "createdAt": "datetime",
+  "updatedAt": "datetime",
+  "result": {
+    "contentUrl": "string",
+    "translationUrl": "string (if applicable)"
+  }
+}
+```
+
+#### Error Responses
+- `404`: Workflow not found
+
+### 4. List Available Agents
+**GET** `/api/agents/list`
+
+#### Response
+```json
+{
+  "agents": [
+    {
+      "id": "robotics-architect",
+      "name": "Robotics-Architect",
+      "description": "Specialist in ROS 2 Humble, NVIDIA Isaac Sim, and Humanoid Kinematics",
+      "status": "active|inactive",
+      "capabilities": ["technical_content", "code_generation", "ros2_examples"]
+    },
+    {
+      "id": "urdu-linguist",
+      "name": "Urdu-Linguist",
+      "description": "Specialist in technical translation to Urdu",
+      "status": "active|inactive",
+      "capabilities": ["technical_translation", "urdu_content", "i18n"]
+    },
+    {
+      "id": "content-stylist",
+      "name": "Content-Stylist",
+      "description": "Maintains 'Startup Founder' tone and MDX component usage",
+      "status": "active|inactive",
+      "capabilities": ["content_styling", "brand_voice", "mdx_formatting"]
+    }
+  ]
+}
+```
+
+### 5. Execute Single Agent
+**POST** `/api/agents/{agentId}/execute`
+
+#### Request
+```json
+{
+  "input": "string (input content for the agent)",
+  "context": {
+    "contentType": "mdx|text|code",
+    "domain": "robotics",
+    "requirements": {}
+  }
+}
+```
+
+#### Response
+```json
+{
+  "executionId": "string",
+  "agentId": "string",
+  "status": "completed|failed",
+  "output": "string (processed content)",
+  "metrics": {
+    "processingTime": "number (ms)",
+    "inputTokens": "number",
+    "outputTokens": "number"
+  }
+}
+```
+
+## Common Error Format
+```json
+{
+  "error": {
+    "code": "string",
+    "message": "string",
+    "details": "object (optional)"
+  }
+}
+```
+
+## Headers
+- `Content-Type`: `application/json`
+- `Accept`: `application/json`
+
+## Rate Limiting
+- Default: 100 requests per minute per IP
+- Burst: 20 requests
+- When rate-limited: HTTP 429 response with `Retry-After` header
+
+## Response Time SLA
+- 95th percentile: <2 seconds (as specified in clarifications)
+- 99th percentile: <5 seconds
